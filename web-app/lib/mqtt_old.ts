@@ -6,6 +6,7 @@ const MQTT_PASSWORD = process.env.NEXT_PUBLIC_MQTT_PASSWORD;
 
 export function connectMQTT() {
   // Build connection options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options: any = {};
 
   // Only add credentials if they exist (for public broker, they won't)

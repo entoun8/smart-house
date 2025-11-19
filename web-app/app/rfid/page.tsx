@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { connectMQTT, TOPICS } from "@/lib/mqtt";
+import { connectMQTT } from "@/lib/mqtt";
 import { KeyRound, CheckCircle, XCircle, Filter, ArrowLeft } from "lucide-react";
 import {
   Card,
@@ -109,6 +109,7 @@ export default function RfidPage() {
     }
 
     if (data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedData = data.map((scan: any) => ({
         ...scan,
         user: scan.users,

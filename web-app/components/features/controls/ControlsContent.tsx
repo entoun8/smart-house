@@ -12,6 +12,7 @@ import BuzzerControl from "./devices/BuzzerControl";
 import RgbControl from "./devices/RgbControl";
 
 export default function ControlsContent() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [client, setClient] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastCommand, setLastCommand] = useState<string>("");

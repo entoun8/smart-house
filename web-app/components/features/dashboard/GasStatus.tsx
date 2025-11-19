@@ -16,7 +16,7 @@ export default function GasStatus() {
   const [gasDetected, setGasDetected] = useState<boolean>(false);
   const [lastDetection, setLastDetection] = useState<string>("");
   const [detectionCount, setDetectionCount] = useState<number>(0);
-  const [clearTimeout, setClearTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     console.log("[GasStatus] Component mounted");
@@ -55,8 +55,8 @@ export default function GasStatus() {
           setDetectionCount((prev) => prev + 1);
 
           // Clear any existing timeout
-          if (clearTimeout) {
-            clearTimeout(clearTimeout);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
           }
 
           // Auto-clear after 30 seconds of no updates (safety)
@@ -64,14 +64,14 @@ export default function GasStatus() {
             setGasDetected(false);
             console.log("[GasStatus] Auto-cleared after 30s timeout");
           }, 30000);
-          setClearTimeout(timeout);
+          setTimeoutId(timeout);
         }
         // If gas cleared (value "0")
         else if (msg === "0") {
           setGasDetected(false);
           console.log("[GasStatus] Gas cleared");
-          if (clearTimeout) {
-            clearTimeout(clearTimeout);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
           }
         }
       }
@@ -83,11 +83,11 @@ export default function GasStatus() {
 
     return () => {
       client.off("message", handleMessage);
-      if (clearTimeout) {
-        clearTimeout(clearTimeout);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
-  }, [clearTimeout]);
+  }, [timeoutId]);
 
   const fetchGasCount = async () => {
     const { data, count } = await supabase

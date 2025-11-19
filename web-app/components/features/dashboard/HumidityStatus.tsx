@@ -77,7 +77,7 @@ export default function HumidityStatus() {
             {humidity !== null ? `${humidity}%` : "--"}
           </p>
           {humidity !== null && (
-            <Badge variant={status.color as any}>
+            <Badge variant={status.color as "default" | "secondary" | "destructive" | "outline"}>
               {status.label}
             </Badge>
           )}
