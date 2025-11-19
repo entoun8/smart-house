@@ -1,0 +1,13 @@
+# Netlify configuration for Next.js app in subdirectory
+[build]
+  base = "web-app"
+  command = "npm run build"
+  publish = "web-app/.next"
+
+# Automatically install dependencies
+[build.environment]
+  NODE_VERSION = "20"
+
+# Plugin for Next.js support
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
