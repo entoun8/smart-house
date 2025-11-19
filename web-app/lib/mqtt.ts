@@ -1,9 +1,9 @@
 import mqtt from "mqtt";
 
 const MQTT_CONFIG = {
-  broker: "ws://broker.hivemq.com:8000/mqtt",  // Public broker, no firewall blocking
-  username: undefined,  // No auth needed for public broker
-  password: undefined,
+  broker: process.env.NEXT_PUBLIC_MQTT_BROKER || "wss://test.mosquitto.org:8081",
+  username: process.env.NEXT_PUBLIC_MQTT_USERNAME || undefined,
+  password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || undefined,
 };
 
 export const TOPICS = {
