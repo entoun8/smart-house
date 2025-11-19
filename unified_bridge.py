@@ -24,9 +24,9 @@ print("=" * 60)
 ESP32_PORT = 'COM5'  # ESP32 port
 BAUD_RATE = 115200
 
-# MQTT settings
-MQTT_BROKER = 'broker.hivemq.com'
-MQTT_PORT = 8000
+# MQTT settings (must match web app configuration)
+MQTT_BROKER = 'test.mosquitto.org'
+MQTT_PORT = 8081
 
 # Supabase settings
 SUPABASE_URL = "https://ktpswojqtskcnqlxzhwa.supabase.co"
@@ -69,10 +69,10 @@ def publish_temperature_mqtt(temp, humidity):
     """Publish temperature and humidity to MQTT"""
     try:
         # Publish temperature
-        cmd_temp = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/sensors/temperature', '{temp}'); setTimeout(() => client.end(), 500); }});"'''
+        cmd_temp = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/sensors/temperature', '{temp}'); setTimeout(() => client.end(), 500); }});"'''
 
         # Publish humidity
-        cmd_hum = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/sensors/humidity', '{humidity}'); setTimeout(() => client.end(), 500); }});"'''
+        cmd_hum = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/sensors/humidity', '{humidity}'); setTimeout(() => client.end(), 500); }});"'''
 
         subprocess.run(cmd_temp, shell=True, cwd='web-app', capture_output=True, timeout=10)
         subprocess.run(cmd_hum, shell=True, cwd='web-app', capture_output=True, timeout=10)
@@ -120,7 +120,7 @@ def log_motion_to_database():
 def publish_motion_mqtt():
     """Publish motion event to MQTT"""
     try:
-        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/events/motion_detected', '1'); setTimeout(() => client.end(), 500); }});"'''
+        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/events/motion_detected', '1'); setTimeout(() => client.end(), 500); }});"'''
 
         result = subprocess.run(cmd, shell=True, cwd='web-app', capture_output=True, timeout=10)
 
@@ -174,7 +174,7 @@ def publish_gas_mqtt(status="1"):
         status: "1" for gas detected, "0" for gas cleared
     """
     try:
-        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/events/gas_detected', '{status}'); setTimeout(() => client.end(), 500); }});"'''
+        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/events/gas_detected', '{status}'); setTimeout(() => client.end(), 500); }});"'''
 
         result = subprocess.run(cmd, shell=True, cwd='web-app', capture_output=True, timeout=10)
 
@@ -202,7 +202,7 @@ def publish_asthma_mqtt(status="1"):
         status: "1" for alert active, "0" for alert cleared
     """
     try:
-        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/events/asthma_alert', '{status}'); setTimeout(() => client.end(), 500); }});"'''
+        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/events/asthma_alert', '{status}'); setTimeout(() => client.end(), 500); }});"'''
 
         result = subprocess.run(cmd, shell=True, cwd='web-app', capture_output=True, timeout=10)
 
@@ -316,7 +316,7 @@ def publish_rfid_mqtt(card_id, authorized, user_name=None):
 
         scan_data = f'{{"card_id": "{card_id}", "authorized": {str(authorized).lower()}, "user": "{user_info}"}}'
 
-        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('ws://{MQTT_BROKER}:{MQTT_PORT}/mqtt'); client.on('connect', () => {{ client.publish('ks5009/house/events/rfid_scan', '{scan_data}'); setTimeout(() => client.end(), 500); }});"'''
+        cmd = f'''node -e "const mqtt = require('mqtt'); const client = mqtt.connect('wss://{MQTT_BROKER}:{MQTT_PORT}'); client.on('connect', () => {{ client.publish('ks5009/house/events/rfid_scan', '{scan_data}'); setTimeout(() => client.end(), 500); }});"'''
 
         result = subprocess.run(cmd, shell=True, cwd='web-app', capture_output=True, timeout=10)
 
