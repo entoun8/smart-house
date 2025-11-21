@@ -38,7 +38,7 @@ export default function MotionStatus() {
       });
     });
 
-    const handleMessage = (topic: string, message: Buffer) => {
+    const handleMessage = async (topic: string, message: Buffer) => {
       if (topic === TOPICS.motion) {
         console.log(
           "🚨 [MotionStatus] Motion detected from MQTT:",
@@ -46,6 +46,14 @@ export default function MotionStatus() {
         );
         setLastDetection(new Date().toLocaleTimeString());
         setMotionCount((prev) => prev + 1);
+
+        // Log to database so it persists after refresh
+        const { error } = await supabase.from("motion_logs").insert({});
+        if (error) {
+          console.error("[MotionStatus] DB log failed:", error);
+        } else {
+          console.log("[MotionStatus] ✅ Logged to database");
+        }
       }
     };
 

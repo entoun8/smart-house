@@ -7,22 +7,33 @@ class MQTT:
     def __init__(self):
         """Initialize MQTT (auto-loads settings from config)"""
         try:
-            params = {
-                'client_id': MQTT_CLIENT_ID,
-                'server': MQTT_BROKER,
-                'port': MQTT_PORT,
-                'keepalive': 60
-            }
-
-            if MQTT_USER and MQTT_PASSWORD:
-                params['user'] = MQTT_USER
-                params['password'] = MQTT_PASSWORD
-
+            # For SSL connection to HiveMQ Cloud
             if MQTT_PORT == 8883:
-                params['ssl'] = True
-                params['ssl_params'] = {'server_hostname': MQTT_BROKER}
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                context.verify_mode = ssl.CERT_NONE  # Skip cert verification
 
-            self.client = MQTTClient(**params)
+                self.client = MQTTClient(
+                    client_id=MQTT_CLIENT_ID,
+                    server=MQTT_BROKER,
+                    port=MQTT_PORT,
+                    user=MQTT_USER,
+                    password=MQTT_PASSWORD,
+                    keepalive=60,
+                    ssl=context
+                )
+            else:
+                # Non-SSL connection
+                params = {
+                    'client_id': MQTT_CLIENT_ID,
+                    'server': MQTT_BROKER,
+                    'port': MQTT_PORT,
+                    'keepalive': 60
+                }
+                if MQTT_USER and MQTT_PASSWORD:
+                    params['user'] = MQTT_USER
+                    params['password'] = MQTT_PASSWORD
+                self.client = MQTTClient(**params)
+
         except Exception as e:
             print(f"[MQTT] Init error: {e}")
             self.client = None

@@ -1,25 +1,24 @@
 """
-All Tasks Combined - Runs Task 1, 2, 3, 4, 5, 6, and 7 simultaneously
-Simple version that handles:
+All Tasks Combined - BRIDGELESS VERSION
+ESP32 -> MQTT -> Web App (web app logs to database)
 - Task 1: LED auto-control (8pm-7am)
-- Task 2: Temperature logging
-- Task 3: Motion detection
-- Task 4: Steam detection
-- Task 5: Gas detection
-- Task 6: Asthma alert
-- Task 7: RFID access control
+- Task 2: Temperature -> MQTT
+- Task 3: Motion -> MQTT
+- Task 4: Steam -> local only
+- Task 5: Gas -> MQTT
+- Task 6: Asthma -> MQTT
+- Task 7: RFID -> MQTT
 """
 
 import time
 import ntptime
 from components import LED, DHT, PIR, WaterSensor, WindowServo, RGBStrip, GasSensor, Fan, LCD, WiFi, MQTT, RFID, Buzzer, DoorServo
-from utils.database import Database
 from config import TOPICS
 
 # Melbourne timezone offset
 MELBOURNE_OFFSET = 11 * 3600
 
-# Initialize all components
+# Initialize components
 led = LED()
 dht = DHT()
 pir = PIR()
@@ -28,13 +27,18 @@ window = WindowServo()
 gas = GasSensor()
 fan = Fan()
 rgb = RGBStrip()
-lcd = LCD()
-wifi = WiFi()
-mqtt = MQTT()
-db = Database()
 rfid = RFID()
 buzzer = Buzzer()
 door = DoorServo()
+wifi = WiFi()
+mqtt = MQTT()
+
+# Initialize LCD last with delay
+time.sleep(0.5)
+lcd = LCD()
+
+# Connection status
+mqtt_connected = False
 
 # Task 1: LED auto-control
 previous_led_state = None
@@ -63,7 +67,7 @@ last_scan_time = 0
 SCAN_COOLDOWN = 3  # Seconds between same card scans
 
 # ============================================
-# TASK 1: LED AUTO-CONTROL FUNCTIONS
+# HELPER FUNCTIONS
 # ============================================
 
 def get_melbourne_hour():
@@ -72,6 +76,60 @@ def get_melbourne_hour():
     melbourne = utc + MELBOURNE_OFFSET
     t = time.localtime(int(melbourne))
     return t[3]
+
+def get_time_str():
+    """Get Melbourne time as string (HH:MM)"""
+    utc = time.time()
+    melbourne = utc + MELBOURNE_OFFSET
+    t = time.localtime(int(melbourne))
+    return f"{t[3]:02d}:{t[4]:02d}"
+
+def sync_time():
+    """Sync time with NTP server"""
+    for attempt in range(5):
+        try:
+            print(f"NTP sync attempt {attempt + 1}/5...")
+            ntptime.settime()
+            print("Time synced!")
+            return True
+        except Exception as e:
+            print(f"  Failed: {e}")
+            if attempt < 4:
+                time.sleep(2)
+    print("NTP sync failed - LED timing may be off")
+    return False
+
+def connect_mqtt():
+    """Connect to MQTT broker"""
+    global mqtt_connected
+    try:
+        if mqtt.connect():
+            mqtt_connected = True
+            print("[MQTT] Connected to HiveMQ!")
+            return True
+    except Exception as e:
+        print(f"[MQTT] Connection failed: {e}")
+    mqtt_connected = False
+    return False
+
+def publish_mqtt(topic, message):
+    """Safely publish to MQTT"""
+    global mqtt_connected
+    if mqtt_connected:
+        try:
+            mqtt.publish(topic, message)
+            print(f"  [MQTT] -> {topic}")
+            return True
+        except Exception as e:
+            print(f"  [MQTT] Fail: {e}")
+            mqtt_connected = False
+    else:
+        print("  [MQTT] Not connected")
+    return False
+
+# ============================================
+# TASK 1: LED AUTO-CONTROL
+# ============================================
 
 def should_led_be_on():
     """LED ON: 8pm (20:00) to 7am (07:00)"""
@@ -89,142 +147,97 @@ def update_led():
         led.off()
         state = "OFF"
 
-    # Only print when state changes
     if state != previous_led_state:
-        print(f"💡 [{get_time_str()}] LED auto-control: {state}")
+        print(f"[{get_time_str()}] LED: {state}")
         previous_led_state = state
-
     return state
 
 def should_check_led():
-    """Check if it's time to update LED (every minute)"""
+    """Check if it's time to update LED"""
     global last_led_check
-
     if last_led_check == 0:
         last_led_check = time.time()
-        return True  # First run
-
+        return True
     elapsed = time.time() - last_led_check
     if elapsed >= LED_CHECK_INTERVAL:
         last_led_check = time.time()
         return True
-
     return False
 
 # ============================================
-# TASK 2: TEMPERATURE FUNCTIONS
+# TASK 2: TEMPERATURE LOGGING
 # ============================================
 
-def sync_time():
-    """Sync time with NTP server - with retry logic"""
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            print(f"NTP sync attempt {attempt + 1}/{max_retries}...")
-            ntptime.settime()
-            print("✅ Time synced successfully!")
-            return True
-        except Exception as e:
-            print(f"   Attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                print("   Retrying in 2 seconds...")
-                time.sleep(2)
-            else:
-                print("❌ All NTP sync attempts failed!")
-                print("⚠️  LED time-based control will NOT work correctly!")
-                return False
-    return False
-
-def get_time_str():
-    """Get Melbourne time as string (HH:MM)"""
-    utc = time.time()
-    melbourne = utc + MELBOURNE_OFFSET
-    t = time.localtime(int(melbourne))
-    return f"{t[3]:02d}:{t[4]:02d}"
-
-def read_temperature():
-    """Read and log temperature/humidity - also updates LCD for Task 6"""
+def log_temperature():
+    """Read and log temperature/humidity via MQTT (DB handled by web app)"""
     global last_log_time
 
-    print(f"\n[{get_time_str()}] Reading DHT sensor...")
-
     data = dht.read()
-
     if data:
         temp = data['temp']
         humidity = data['humidity']
 
-        # Print for bridge to detect
-        print(f"  Temperature: {temp}°C")
-        print(f"  Humidity: {humidity}%")
+        print(f"[{get_time_str()}] Temp: {temp}C, Humidity: {humidity}%")
 
-        # Update LCD display (Task 6)
+        # Publish to MQTT (web app will log to DB)
+        publish_mqtt(TOPICS.sensor("temperature"), str(temp))
+        publish_mqtt(TOPICS.sensor("humidity"), str(humidity))
+
+        # Update LCD
         if lcd.is_connected():
             lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
-            print(f"  LCD updated")
-
-        # Note: Bridge handles MQTT and database logging
-        # ESP32 just prints to serial for bridge to detect
 
         last_log_time = time.time()
-        return True
+        return data
     else:
-        print("  Failed to read sensor")
-        return False
+        print("  DHT read failed")
+        return None
 
 def should_log_temperature():
     """Check if it's time to log temperature"""
     if last_log_time == 0:
-        return True  # First run
-
-    elapsed = time.time() - last_log_time
-    return elapsed >= LOG_INTERVAL
+        return True
+    return time.time() - last_log_time >= LOG_INTERVAL
 
 # ============================================
-# TASK 3: MOTION FUNCTIONS
+# TASK 3: MOTION DETECTION
 # ============================================
 
 def handle_motion_detected():
-    """Handle motion detection event"""
-    print("🚶 Motion detected!")
+    """Handle motion detection via MQTT (DB handled by web app)"""
+    print("Motion detected!")
 
     # Light up RGB orange
     rgb.orange()
 
-    # Note: Bridge handles MQTT and database logging
-    # ESP32 just prints to serial for bridge to detect
+    # Publish to MQTT (web app will log to DB)
+    publish_mqtt(TOPICS.event("motion_detected"), "1")
 
 def handle_motion_stopped():
     """Handle when motion stops"""
     rgb.off()
 
 # ============================================
-# TASK 4: STEAM DETECTION FUNCTIONS
+# TASK 4: STEAM DETECTION (LOCAL ONLY)
 # ============================================
 
 def handle_steam_detected():
-    """Handle steam/moisture detection event"""
-    print("💧 Steam detected!")
-
-    # Close window
+    """Handle steam detection - local only, no cloud"""
+    print("Steam detected! Closing window...")
     window.close()
-
-    # Flash RGB blue
     rgb.blue()
-
-    # Note: Task 4 is simple - no database or MQTT required
 
 def handle_steam_stopped():
     """Handle when steam stops"""
     rgb.off()
 
 # ============================================
-# TASK 5: GAS DETECTION FUNCTIONS
+# TASK 5: GAS DETECTION
 # ============================================
 
 def handle_gas_detected():
-    """Handle gas detection event"""
-    print("🔥 Gas detected!")
+    """Handle gas detection via MQTT (DB handled by web app)"""
+    print("GAS DETECTED!")
 
     # Turn on fan
     fan.on()
@@ -232,17 +245,18 @@ def handle_gas_detected():
     # Solid RGB red
     rgb.red()
 
-    # Note: Bridge handles MQTT and database logging
-    # ESP32 just prints to serial for bridge to detect
+    # Publish to MQTT (web app will log to DB)
+    publish_mqtt(TOPICS.event("gas_detected"), "1")
 
 def handle_gas_cleared():
     """Handle when gas clears"""
-    print("✅ Gas cleared!")
+    print("Gas cleared")
     fan.off()
     rgb.off()
+    publish_mqtt(TOPICS.event("gas_detected"), "0")
 
 # ============================================
-# TASK 6: ASTHMA ALERT FUNCTIONS
+# TASK 6: ASTHMA ALERT
 # ============================================
 
 def check_asthma_conditions(temp, humidity):
@@ -250,68 +264,50 @@ def check_asthma_conditions(temp, humidity):
     return humidity > 50 and temp > 27
 
 def handle_asthma_alert():
-    """Handle asthma alert - display on LCD and publish MQTT"""
-    print("⚠️  ASTHMA ALERT!")
-    print("   Conditions: High humidity + High temperature")
+    """Handle asthma alert - LCD + MQTT"""
+    print("ASTHMA ALERT! (H>50% & T>27C)")
 
-    # Display on LCD
     if lcd.is_connected():
         lcd.display_alert("! ASTHMA ALERT !", "H>50% T>27C")
 
-    # Publish to MQTT for web dashboard
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("asthma_alert"), "1")
+    publish_mqtt(TOPICS.event("asthma_alert"), "1")
 
 def handle_asthma_cleared(temp, humidity):
-    """Handle when alert conditions clear - show normal readings"""
-    print("✅ Asthma alert cleared")
+    """Handle when alert clears"""
+    print("Asthma alert cleared")
 
-    # Display normal readings on LCD
     if lcd.is_connected():
         lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
 
-    # Publish to MQTT
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("asthma_alert"), "0")
-
-def update_normal_display(temp, humidity):
-    """Update LCD with current readings when no alert"""
-    if lcd.is_connected():
-        lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
+    publish_mqtt(TOPICS.event("asthma_alert"), "0")
 
 # ============================================
-# TASK 7: RFID ACCESS CONTROL FUNCTIONS
+# TASK 7: RFID ACCESS CONTROL
 # ============================================
 
 def handle_rfid_scan(card_id):
-    """Handle RFID card scan - send to bridge for authorization"""
-    print(f"\nRFID card scanned: {card_id}")
-    print(f"RFID check request: {card_id}")
-    # Bridge will handle authorization and log to database
+    """Handle RFID scan via MQTT (auth checked by web app callback)"""
+    print(f"RFID scanned: {card_id}")
+
+    # Publish to MQTT - web app will check auth and respond
+    publish_mqtt(TOPICS.event("rfid_scan"), f'{{"card":"{card_id}","action":"check"}}')
+
+    # For now, flash green as acknowledgment (web app controls actual auth)
+    rgb.green()
+    time.sleep(1)
+    rgb.off()
 
 def handle_authorized_access(card_id):
-    """Handle authorized RFID card - open door"""
-    print(f"RFID authorized: {card_id}")
-
-    # Open door
+    """Handle authorized RFID - open door"""
     door.open()
-
-    # Flash RGB green
     rgb.green()
     time.sleep(2)
     rgb.off()
-
-    # Close door after 5 seconds
     time.sleep(3)
     door.close()
 
-    print(f"RFID authorized complete: {card_id}")
-
 def handle_unauthorized_access(card_id):
-    """Handle unauthorized RFID card - flash red and buzz"""
-    print(f"RFID unauthorized: {card_id}")
-
-    # Flash RGB red and buzz
+    """Handle unauthorized RFID - flash red + buzz"""
     for _ in range(3):
         rgb.red()
         buzzer.on()
@@ -320,132 +316,114 @@ def handle_unauthorized_access(card_id):
         buzzer.off()
         time.sleep(0.3)
 
-    print(f"RFID unauthorized complete: {card_id}")
-
 # ============================================
 # MAIN PROGRAM
 # ============================================
 
 print("=" * 50)
-print("ALL TASKS - Task 1 + 2 + 3 + 4 + 5 + 6 + 7")
+print("SMART HOUSE - BRIDGELESS MODE")
+print("Direct ESP32 to Cloud")
 print("=" * 50)
 
 # Connect WiFi
 print("\nConnecting to WiFi...")
-wifi.connect()
+if wifi.connect():
+    print("WiFi connected!")
+else:
+    print("WiFi failed - continuing offline")
 
-# Sync time for Task 1
-print("Syncing time for LED auto-control...")
+# Sync time
+print("\nSyncing time...")
 sync_time()
 
-# Note: MQTT and Database handled by PC bridge
-# ESP32 just prints to serial, no direct internet needed
+# Connect MQTT
+print("\nConnecting to MQTT...")
+connect_mqtt()
 
-print(f"\nTask 1: LED auto-control (8pm-7am)")
-print(f"Task 2: Temperature logging every {LOG_INTERVAL // 60} minutes")
-print("Task 3: Motion detection (continuous)")
-print("Task 4: Steam detection (continuous)")
-print("Task 5: Gas detection (continuous)")
-print("Task 6: Asthma alert (H>50% & T>27°C)")
-print("Task 7: RFID access control (continuous)")
-print("Bridge mode: Serial output only")
+print(f"\nTask 1: LED auto (8pm-7am)")
+print(f"Task 2: Temperature (every 30 min) -> DB + MQTT")
+print("Task 3: Motion -> DB + MQTT")
+print("Task 4: Steam -> local only")
+print("Task 5: Gas -> DB + MQTT")
+print("Task 6: Asthma -> LCD + MQTT")
+print("Task 7: RFID -> DB + MQTT")
 print("=" * 50)
 
-# Do initial LED check
-print(f"\nCurrent time: {get_time_str()}")
+# Initial setup
+print(f"\nTime: {get_time_str()}")
 update_led()
-
-# Do initial temperature reading
-print("\nInitial temperature reading...")
-read_temperature()
-
-# Close door at start (Task 7)
+log_temperature()
 door.close()
 
-print("\nSetup complete! All tasks monitoring...")
+print("\nRunning...")
 print("=" * 50)
 
-# Main loop - runs all tasks
+# Main loop
 while True:
     try:
-        # TASK 1: Check LED state (every minute)
+        # Task 1: LED
         if should_check_led():
             update_led()
 
-        # TASK 2 & 6: Check if time to log temperature and check asthma
+        # Task 2 & 6: Temperature + Asthma check
         if should_log_temperature():
-            data = dht.read()
+            data = log_temperature()
             if data:
                 temp = data['temp']
                 humidity = data['humidity']
 
-                # Print for bridge to detect (Task 2)
-                print(f"  Temperature: {temp}°C")
-                print(f"  Humidity: {humidity}%")
-                last_log_time = time.time()
-
-                # TASK 6: Check asthma conditions
                 asthma_alert = check_asthma_conditions(temp, humidity)
 
                 if asthma_alert and not previous_asthma:
                     handle_asthma_alert()
                 elif not asthma_alert and previous_asthma:
                     handle_asthma_cleared(temp, humidity)
-                elif not asthma_alert:
-                    # Update normal display with current readings
-                    update_normal_display(temp, humidity)
 
                 previous_asthma = asthma_alert
-            else:
-                print("  Failed to read sensor")
 
-        # TASK 3: Check for motion
+        # Task 3: Motion
         motion = pir.motion_detected()
-
         if motion and not previous_motion:
             handle_motion_detected()
         elif not motion and previous_motion:
             handle_motion_stopped()
-
         previous_motion = motion
 
-        # TASK 4: Check for steam
+        # Task 4: Steam
         steam = water.is_wet()
-
         if steam and not previous_steam:
             handle_steam_detected()
         elif not steam and previous_steam:
             handle_steam_stopped()
-
         previous_steam = steam
 
-        # TASK 5: Check for gas
+        # Task 5: Gas
         gas_detected = gas.is_detected()
-
         if gas_detected and not previous_gas:
             handle_gas_detected()
         elif not gas_detected and previous_gas:
             handle_gas_cleared()
-
         previous_gas = gas_detected
 
-        # TASK 7: Check for RFID card
+        # Task 7: RFID
         card_id = rfid.scan()
         current_time = time.time()
-
         if card_id and (card_id != last_card_id or current_time - last_scan_time > SCAN_COOLDOWN):
             handle_rfid_scan(card_id)
             last_card_id = card_id
             last_scan_time = current_time
 
-        # Check MQTT messages
-        mqtt.check_messages()
+        # Check MQTT messages and reconnect if needed
+        if mqtt_connected:
+            mqtt.check_messages()
+        else:
+            # Try to reconnect every loop iteration
+            connect_mqtt()
 
-        # Sleep briefly
         time.sleep(0.5)
 
     except KeyboardInterrupt:
-        print("\n\nStopping all tasks...")
+        print("\nStopping...")
         led.off()
         rgb.off()
         fan.off()
@@ -455,5 +433,5 @@ while True:
         mqtt.disconnect()
         break
     except Exception as e:
-        print(f"\nError: {e}")
+        print(f"Error: {e}")
         time.sleep(1)

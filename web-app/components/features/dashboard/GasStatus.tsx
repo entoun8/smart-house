@@ -54,6 +54,11 @@ export default function GasStatus() {
           setLastDetection(new Date().toLocaleTimeString());
           setDetectionCount((prev) => prev + 1);
 
+          // Log to database
+          supabase.from("gas_logs").insert({ value: 1 }).then(({ error }) => {
+            if (!error) console.log("[GasStatus] ✅ Logged to database");
+          });
+
           // Clear any existing timeout
           if (timeoutId) {
             clearTimeout(timeoutId);

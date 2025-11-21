@@ -1,9 +1,9 @@
 import mqtt from "mqtt";
 
 const MQTT_CONFIG = {
-  broker: process.env.NEXT_PUBLIC_MQTT_BROKER || "wss://test.mosquitto.org:8081",
-  username: process.env.NEXT_PUBLIC_MQTT_USERNAME || undefined,
-  password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || undefined,
+  broker: process.env.NEXT_PUBLIC_MQTT_BROKER || "wss://26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud:8884/mqtt",
+  username: process.env.NEXT_PUBLIC_MQTT_USERNAME || "smarthome",
+  password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || "SmartHome123!",
 };
 
 export const TOPICS = {

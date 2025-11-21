@@ -22,11 +22,23 @@ export default function HumidityStatus() {
     connectMQTT();
 
     // Subscribe to humidity topic (real-time updates from ESP32)
-    subscribe(TOPICS.humidity, (message) => {
+    subscribe(TOPICS.humidity, async (message) => {
       const hum = parseFloat(message);
       setHumidity(hum);
       setLastUpdate(new Date().toLocaleTimeString());
       console.log("Humidity from MQTT:", hum);
+
+      // Log to database (get temp from localStorage set by TemperatureStatus)
+      const tempStr = localStorage.getItem("lastTemp");
+      const temp = tempStr ? parseFloat(tempStr) : null;
+      if (temp !== null) {
+        const { error } = await supabase
+          .from("temperature_logs")
+          .insert({ temp, humidity: hum });
+        if (!error) {
+          console.log("✅ Temperature logged to DB:", temp, hum);
+        }
+      }
     });
 
     // Fetch initial humidity from database (in case ESP32 is offline)

@@ -25,6 +25,8 @@ export default function TemperatureStatus() {
       setTemperature(temp);
       setLastUpdate(new Date().toLocaleTimeString());
       console.log("Temperature from MQTT:", temp);
+      // Store for HumidityStatus to log both together
+      localStorage.setItem("lastTemp", temp.toString());
     });
 
     const fetchInitialTemperature = async () => {
