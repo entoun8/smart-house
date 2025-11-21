@@ -5,7 +5,7 @@ Import all components from their categorized folders
 """
 
 # Sensors
-from .sensors import PIR, DHT, GasSensor, WaterSensor
+from .sensors import PIR, DHT, GasSensor, WaterSensor, RFID
 
 # Actuators
 from .actuators import LED, RGBStrip, Buzzer, Fan, DoorServo, WindowServo
@@ -22,6 +22,7 @@ __all__ = [
     'DHT',
     'GasSensor',
     'WaterSensor',
+    'RFID',
 
     # Actuators
     'LED',
