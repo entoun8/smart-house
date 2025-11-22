@@ -1,45 +1,45 @@
 """
 Task 4: Steam Detection - BUTTON TEST VERSION
 Press LEFT button to simulate steam detection
+Press RIGHT button to stop
 """
 
-from machine import Pin, PWM
 import time
-import sys
-sys.path.append('/lib')
-from neopixel import NeoPixel
+from machine import Pin
+from components import WindowServo, RGBStrip
 
 print("\n" + "="*50)
 print("TASK 4: STEAM DETECTION (Button Test)")
 print("="*50)
 
 # Components
-window_servo = PWM(Pin(5), freq=50)
-rgb = NeoPixel(Pin(26), 4)
+window = WindowServo()
+rgb = RGBStrip()
 btn_left = Pin(16, Pin.IN, Pin.PULL_UP)
-
-# Window positions
-WINDOW_OPEN = 128
-WINDOW_CLOSED = 77
-
-# RGB colors
-def set_rgb(color):
-    for i in range(4):
-        rgb[i] = color
-    rgb.write()
+btn_right = Pin(27, Pin.IN, Pin.PULL_UP)
 
 # Start with window open, RGB off
-window_servo.duty(WINDOW_OPEN)
-set_rgb((0, 0, 0))
+window.open()
+rgb.off()
 
 print("\nWindow is OPEN")
-print("\nReady! Press LEFT button to simulate steam")
+print("\nLEFT button: simulate steam")
+print("RIGHT button: stop test")
 print("="*50)
 
 steam_active = False
 last_press = 0
 
 while True:
+    # Right button - stop test
+    if btn_right.value() == 0:
+        print("\n" + "="*50)
+        print("STOPPING TEST...")
+        print("="*50)
+        rgb.off()
+        window.open()
+        break
+
     # Debounce - only allow button press every 2 seconds
     if time.time() - last_press < 2:
         time.sleep(0.1)
@@ -54,9 +54,9 @@ while True:
             print("STEAM DETECTED!")
             print("="*50)
             print("Closing window...")
-            window_servo.duty(WINDOW_CLOSED)
+            window.close()
             print("RGB: BLUE")
-            set_rgb((0, 0, 255))
+            rgb.blue()
             steam_active = True
             print("\nPress LEFT button again to clear steam")
         else:
@@ -64,10 +64,12 @@ while True:
             print("STEAM CLEARED")
             print("="*50)
             print("Opening window...")
-            window_servo.duty(WINDOW_OPEN)
+            window.open()
             print("RGB: OFF")
-            set_rgb((0, 0, 0))
+            rgb.off()
             steam_active = False
             print("\nPress LEFT button to simulate steam again")
 
     time.sleep(0.1)
+
+print("Test ended.")

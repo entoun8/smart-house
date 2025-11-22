@@ -1,114 +1,42 @@
-import time
-from components import DHT, LCD, WiFi, MQTT
+"""Task 6: Asthma Alert (humidity >50% + temp >27C) -> MQTT + LCD"""
+
 from config import TOPICS
 
-dht = DHT()
-lcd = LCD()
-wifi = WiFi()
-mqtt = MQTT()
 
-previous_alert = False
+class AsthmaTask:
+    def __init__(self, mqtt, lcd, temp_task):
+        self.mqtt = mqtt
+        self.lcd = lcd
+        self.temp_task = temp_task  # Reference to temperature task for data
+        self.previous = False
 
-def check_asthma_conditions(temp, humidity):
-    """Check if asthma alert conditions are met"""
-    return humidity > 50 and temp > 27
+    def _check_conditions(self, temp, humidity):
+        """Asthma alert: humidity >50% AND temp >27C"""
+        return humidity > 50 and temp > 27
 
-def handle_asthma_alert():
-    """Handle asthma alert - display on LCD and publish MQTT"""
-    print("⚠️  ASTHMA ALERT!")
-    print("   Conditions: High humidity + High temperature")
+    def update(self):
+        """Check asthma conditions - call this in main loop"""
+        data = self.temp_task.get_last_data()
+        if not data:
+            return
 
-    if lcd.is_connected():
-        lcd.display_alert("! ASTHMA ALERT !", "H>50% T>27C")
+        temp = data['temp']
+        humidity = data['humidity']
+        alert = self._check_conditions(temp, humidity)
 
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("asthma_alert"), "1")
+        if alert and not self.previous:
+            print("[Asthma] ALERT! (H>50% & T>27C)")
+            if self.lcd and self.lcd.is_connected():
+                self.lcd.display_alert("! ASTHMA ALERT !", "H>50% T>27C")
+            self.mqtt.publish(TOPICS.event("asthma_alert"), "1")
 
-def handle_alert_cleared(temp, humidity):
-    """Handle when alert conditions clear - show normal readings"""
-    print("✅ Asthma alert cleared")
+        elif not alert and self.previous:
+            print("[Asthma] Cleared")
+            if self.lcd and self.lcd.is_connected():
+                self.lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
+            self.mqtt.publish(TOPICS.event("asthma_alert"), "0")
 
-    if lcd.is_connected():
-        lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
+        self.previous = alert
 
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("asthma_alert"), "0")
-
-def update_normal_display(temp, humidity):
-    """Update LCD with current readings when no alert"""
-    if lcd.is_connected():
-        lcd.display_alert(f"Temp: {temp}C", f"Humidity: {humidity}%")
-
-print("=" * 50)
-print("ASTHMA ALERT SYSTEM - TASK 6")
-print("=" * 50)
-
-print("\nConnecting to WiFi...")
-if not wifi.is_connected():
-    if wifi.connect():
-        print(f"WiFi connected! IP: {wifi.get_ip()}")
-    else:
-        print("WiFi connection failed!")
-else:
-    print(f"WiFi already connected! IP: {wifi.get_ip()}")
-
-time.sleep(2)
-
-print("Connecting to MQTT...")
-if mqtt.connect():
-    print("MQTT connected!")
-else:
-    print("MQTT connection failed! Bridge will handle publishing.")
-
-print("Checking LCD...")
-if lcd.is_connected():
-    print(f"LCD connected at address 0x{lcd.addr:02X}")
-    lcd.clear()
-else:
-    print("⚠️  LCD not connected! Alert will only show in serial/MQTT")
-
-print("\nSetup complete! Monitoring for asthma conditions...")
-print("Alert triggers when: Humidity > 50% AND Temperature > 27°C")
-print("=" * 50)
-
-last_display_update = 0
-DISPLAY_UPDATE_INTERVAL = 5  
-
-while True:
-    try:
-        data = dht.read()
-
-        if data:
-            temp = data['temp']
-            humidity = data['humidity']
-
-            alert_active = check_asthma_conditions(temp, humidity)
-
-            if int(time.time()) % 10 == 0:
-                print(f"\n[{time.localtime()[3]:02d}:{time.localtime()[4]:02d}:{time.localtime()[5]:02d}] T: {temp}°C, H: {humidity}%")
-
-            if alert_active and not previous_alert:
-                handle_asthma_alert()
-            elif not alert_active and previous_alert:
-                handle_alert_cleared(temp, humidity)
-
-            elif not alert_active:
-                current_time = time.time()
-                if current_time - last_display_update >= DISPLAY_UPDATE_INTERVAL:
-                    update_normal_display(temp, humidity)
-                    last_display_update = current_time
-
-            previous_alert = alert_active
-
-        mqtt.check_messages()
-
-        time.sleep(1)
-
-    except KeyboardInterrupt:
-        print("\n\nStopping asthma alert system...")
-        lcd.clear()
-        mqtt.disconnect()
-        break
-    except Exception as e:
-        print(f"\nError: {e}")
-        time.sleep(1)
+    def cleanup(self):
+        pass

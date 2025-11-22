@@ -1,76 +1,29 @@
-import time
-from components import PIR, RGBStrip, WiFi, MQTT
-from utils.database import Database
+"""Task 3: Motion Detection -> MQTT"""
+
+from components import PIR
 from config import TOPICS
 
-pir = PIR()
-rgb = RGBStrip()
-wifi = WiFi()
-mqtt = MQTT()
-db = Database()
 
-previous_motion = False
+class MotionTask:
+    def __init__(self, mqtt, rgb_controller):
+        self.pir = PIR()
+        self.mqtt = mqtt
+        self.rgb = rgb_controller
+        self.previous = False
 
-def handle_motion_detected():
-    """Handle motion detection event"""
-    print("Motion detected!")
+    def update(self):
+        """Check motion sensor - call this in main loop"""
+        motion = self.pir.motion_detected()
 
-    rgb.orange()
+        if motion and not self.previous:
+            print("[Motion] Detected")
+            self.rgb.set_rgb("motion", self.rgb.rgb.orange)
+            self.mqtt.publish(TOPICS.event("motion_detected"), "1")
 
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("motion_detected"), "1")
+        elif not motion and self.previous:
+            self.rgb.clear_rgb("motion")
 
-    db.log_motion()
+        self.previous = motion
 
-def handle_motion_stopped():
-    """Handle when motion stops"""
-    rgb.off()
-
-print("=" * 50)
-print("PIR MOTION DETECTION - TASK 3")
-print("=" * 50)
-
-print("\nConnecting to WiFi...")
-if not wifi.is_connected():
-    if wifi.connect():
-        print(f"WiFi connected! IP: {wifi.get_ip()}")
-    else:
-        print("WiFi connection failed!")
-else:
-    print(f"WiFi already connected! IP: {wifi.get_ip()}")
-
-time.sleep(2)
-
-print("Connecting to MQTT...")
-if mqtt.connect():
-    print("MQTT connected!")
-else:
-    print("MQTT connection failed! Bridge will handle logging.")
-
-print("\nSetup complete! Monitoring for motion...")
-print("=" * 50)
-
-while True:
-    try:
-        motion = pir.motion_detected()
-
-        if motion and not previous_motion:
-            handle_motion_detected()
-
-        elif not motion and previous_motion:
-            handle_motion_stopped()
-
-        previous_motion = motion
-
-        mqtt.check_messages()
-
-        time.sleep(0.5)
-
-    except KeyboardInterrupt:
-        print("\n\nStopping PIR motion detector...")
-        rgb.off()
-        mqtt.disconnect()
-        break
-    except Exception as e:
-        print(f"\nError: {e}")
-        time.sleep(1)
+    def cleanup(self):
+        self.rgb.clear_rgb("motion")

@@ -1,119 +1,113 @@
 """
 Task 6: Asthma Alert - BUTTON TEST VERSION
 Press LEFT button to simulate asthma alert conditions
+Press RIGHT button to stop test
+Publishes to MQTT for website updates
 """
 
-from machine import Pin, I2C
 import time
-import sys
-sys.path.append('/lib')
+from machine import Pin
+from components import LCD, WiFi, MQTT
+from config import TOPICS
 
 print("\n" + "="*50)
 print("TASK 6: ASTHMA ALERT (Button Test)")
 print("="*50)
 
-# Initialize I2C for LCD
-i2c = I2C(0, scl=Pin(22), sda=Pin(21), freq=400000)
-
-# LCD1602 I2C class
-class LCD1602:
-    def __init__(self, i2c, addr=0x27):
-        self.i2c = i2c
-        self.addr = addr
-        self.init_lcd()
-
-    def init_lcd(self):
-        try:
-            self.write_cmd(0x33)
-            self.write_cmd(0x32)
-            self.write_cmd(0x06)
-            self.write_cmd(0x0C)
-            self.write_cmd(0x28)
-            self.write_cmd(0x01)
-            time.sleep(0.2)
-            print("LCD initialized!")
-        except Exception as e:
-            print(f"LCD init error: {e}")
-
-    def write_cmd(self, cmd):
-        try:
-            self.i2c.writeto(self.addr, bytes([cmd]))
-            time.sleep(0.002)
-        except:
-            pass
-
-    def display(self, line1, line2=""):
-        try:
-            self.clear()
-            # Line 1
-            self.write_cmd(0x80)
-            for char in line1[:16]:
-                self.i2c.writeto(self.addr, bytes([ord(char)]))
-                time.sleep(0.001)
-            # Line 2
-            if line2:
-                self.write_cmd(0xC0)
-                for char in line2[:16]:
-                    self.i2c.writeto(self.addr, bytes([ord(char)]))
-                    time.sleep(0.001)
-        except Exception as e:
-            print(f"LCD display error: {e}")
-
-    def clear(self):
-        try:
-            self.write_cmd(0x01)
-            time.sleep(0.002)
-        except:
-            pass
-
-# Initialize components
-try:
-    lcd = LCD1602(i2c)
-    lcd_available = True
-except Exception as e:
-    print(f"LCD not available: {e}")
-    lcd_available = False
-
+# Components
 btn_left = Pin(16, Pin.IN, Pin.PULL_UP)
+btn_right = Pin(27, Pin.IN, Pin.PULL_UP)
+
+# Initialize LCD
+print("\n[LCD] Initializing...")
+time.sleep(0.5)
+lcd = LCD()
+print(f"[LCD] Connected: {lcd.is_connected()}")
+
+# Connect WiFi and MQTT
+print("\n[WiFi] Connecting...")
+wifi = WiFi()
+wifi.connect()
+
+print("[MQTT] Connecting...")
+mqtt = MQTT()
+mqtt_connected = False
+try:
+    mqtt_connected = mqtt.connect()
+    if mqtt_connected:
+        print("[MQTT] Connected!")
+except Exception as e:
+    print(f"[MQTT] Failed: {e}")
 
 # Display normal state
-if lcd_available:
-    lcd.display("Temp: 25C", "Humidity: 45%")
-    print("LCD showing normal conditions")
+if lcd.is_connected():
+    lcd.display_alert("Temp: 25C", "Humidity: 45%")
+    print("[LCD] Showing normal conditions")
 
 print("\nNormal conditions (no alert)")
-print("\nReady! Press LEFT button to simulate asthma alert")
+print("\nLEFT button: simulate asthma alert")
+print("RIGHT button: stop test")
 print("="*50)
 
 alert_active = False
-last_state = 1  # Button not pressed (pull-up)
+last_press = 0
 
 while True:
-    current_state = btn_left.value()
+    # Right button - stop test
+    if btn_right.value() == 0:
+        print("\n" + "="*50)
+        print("STOPPING TEST...")
+        print("="*50)
+        if lcd.is_connected():
+            lcd.clear()
+        if mqtt_connected:
+            mqtt.publish(TOPICS.event("asthma_alert"), "0")
+            mqtt.disconnect()
+        break
 
-    # Detect button press (transition from 1 to 0)
-    if current_state == 0 and last_state == 1:
-        time.sleep(0.05)  # Small debounce delay
+    # Debounce
+    if time.time() - last_press < 2:
+        time.sleep(0.1)
+        continue
+
+    # Left button pressed - simulate asthma alert
+    if btn_left.value() == 0:
+        last_press = time.time()
 
         if not alert_active:
             print("\n" + "="*50)
-            print("⚠️  ASTHMA ALERT!")
+            print("ASTHMA ALERT!")
             print("="*50)
-            print("Conditions: High humidity + High temperature")
-            if lcd_available:
-                lcd.display("! ASTHMA ALERT !", "H>50% T>27C")
-                print("LCD: Alert displayed")
+            print("Conditions: Humidity >50% + Temp >27C")
+
+            if lcd.is_connected():
+                lcd.display_alert("! ASTHMA ALERT !", "H>50% T>27C")
+                print("[LCD] Alert displayed")
+
+            # Publish to MQTT (website)
+            if mqtt_connected:
+                mqtt.publish(TOPICS.event("asthma_alert"), "1")
+                print("[MQTT] Published asthma_alert: 1")
+
             alert_active = True
             print("\nPress LEFT button to clear alert")
         else:
             print("\n" + "="*50)
-            print("✅ Asthma alert cleared")
+            print("ASTHMA ALERT CLEARED")
             print("="*50)
-            if lcd_available:
-                lcd.display("Temp: 25C", "Humidity: 45%")
-                print("LCD: Normal display")
+
+            if lcd.is_connected():
+                lcd.display_alert("Temp: 25C", "Humidity: 45%")
+                print("[LCD] Normal display")
+
+            # Publish to MQTT (website)
+            if mqtt_connected:
+                mqtt.publish(TOPICS.event("asthma_alert"), "0")
+                print("[MQTT] Published asthma_alert: 0")
+
             alert_active = False
             print("\nPress LEFT button to simulate asthma alert again")
 
-    last_state = current_state
     time.sleep(0.1)
+
+print("Test ended.")

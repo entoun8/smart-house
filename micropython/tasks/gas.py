@@ -1,81 +1,59 @@
+"""Task 5: Gas Detection -> MQTT + Fan"""
+
 import time
-from components import GasSensor, Fan, RGBStrip, WiFi, MQTT
-from utils.database import Database
+from components import GasSensor, Fan
 from config import TOPICS
 
-gas = GasSensor()
-fan = Fan()
-rgb = RGBStrip()
-wifi = WiFi()
-mqtt = MQTT()
-db = Database()
+WARMUP_TIME = 30  # Seconds for sensor to stabilize
+DEBOUNCE_COUNT = 6  # Consecutive readings needed to confirm
 
-previous_gas = False
 
-def handle_gas_detected():
-    """Handle gas detection event"""
-    print("Gas detected!")
+class GasTask:
+    def __init__(self, mqtt, rgb_controller):
+        self.gas = GasSensor()
+        self.fan = Fan()
+        self.mqtt = mqtt
+        self.rgb = rgb_controller
+        self.previous = False
+        self.warmup_done = False
+        self.start_time = time.time()
+        self.detection_count = 0
 
-    fan.on()
-    rgb.red()
+    def update(self):
+        """Check gas sensor with debouncing - call this in main loop"""
+        # Skip during warmup
+        if not self.warmup_done:
+            if time.time() - self.start_time > WARMUP_TIME:
+                self.warmup_done = True
+                print("[Gas] Warmup complete")
+            return
 
-    if mqtt.is_connected():
-        mqtt.publish(TOPICS.event("gas_detected"), "1")
+        # Read sensor
+        reading = self.gas.is_detected()
 
-    db.log_gas()
+        # Debouncing
+        if reading:
+            self.detection_count += 1
+        else:
+            self.detection_count = 0
 
-def handle_gas_cleared():
-    """Handle when gas clears"""
-    print("Gas cleared!")
-    fan.off()
-    rgb.off()
+        # Confirm only after enough consecutive readings
+        confirmed = self.detection_count >= DEBOUNCE_COUNT
 
-print("=" * 50)
-print("GAS DETECTION & FAN CONTROL - TASK 5")
-print("=" * 50)
+        if confirmed and not self.previous:
+            print("[Gas] DETECTED!")
+            self.fan.on()
+            self.rgb.set_rgb("gas", self.rgb.rgb.red)
+            self.mqtt.publish(TOPICS.event("gas_detected"), "1")
 
-print("\nConnecting to WiFi...")
-if not wifi.is_connected():
-    if wifi.connect():
-        print(f"WiFi connected! IP: {wifi.get_ip()}")
-    else:
-        print("WiFi connection failed!")
-else:
-    print(f"WiFi already connected! IP: {wifi.get_ip()}")
+        elif not confirmed and self.previous:
+            print("[Gas] Cleared")
+            self.fan.off()
+            self.rgb.clear_rgb("gas")
+            self.mqtt.publish(TOPICS.event("gas_detected"), "0")
 
-time.sleep(2)
+        self.previous = confirmed
 
-print("Connecting to MQTT...")
-if mqtt.connect():
-    print("MQTT connected!")
-else:
-    print("MQTT connection failed! Bridge will handle logging.")
-
-print("\nSetup complete! Monitoring for gas...")
-print("=" * 50)
-
-while True:
-    try:
-        gas_detected = gas.is_detected()
-
-        if gas_detected and not previous_gas:
-            handle_gas_detected()
-
-        elif not gas_detected and previous_gas:
-            handle_gas_cleared()
-
-        previous_gas = gas_detected
-
-        mqtt.check_messages()
-
-        time.sleep(0.5)
-
-    except KeyboardInterrupt:
-        print("\n\nStopping gas detector...")
-        fan.off()
-        rgb.off()
-        mqtt.disconnect()
-        break
-    except Exception as e:
-        print(f"\nError: {e}")
-        time.sleep(1)
+    def cleanup(self):
+        self.fan.off()
+        self.rgb.clear_rgb("gas")

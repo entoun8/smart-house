@@ -1,91 +1,49 @@
+"""Task 1: LED Auto-Control (8pm-7am)"""
+
 import time
-import ntptime
-from components import LED, WiFi
+from components import LED
 
 MELBOURNE_OFFSET = 11 * 3600
+CHECK_INTERVAL = 60  # Check every minute
 
-led = LED()
-wifi = WiFi()
 
-def sync_time():
-    """Sync time with NTP server"""
-    try:
-        ntptime.settime()
-        print("✅ Time synced!")
-        return True
-    except Exception as e:
-        print(f"⚠️  Time sync failed: {e}")
-        return False
+class LEDControlTask:
+    def __init__(self):
+        self.led = LED()
+        self.previous_state = None
+        self.last_check = 0
 
-def get_melbourne_hour():
-    """Get current hour in Melbourne (0-23)"""
-    utc = time.time()
-    melbourne = utc + MELBOURNE_OFFSET
-    t = time.localtime(int(melbourne))
-    return t[3]
+    def _get_hour(self):
+        """Get current hour in Melbourne (0-23)"""
+        melbourne = time.time() + MELBOURNE_OFFSET
+        return time.localtime(int(melbourne))[3]
 
-def get_time_str():
-    """Get Melbourne time as string (HH:MM)"""
-    utc = time.time()
-    melbourne = utc + MELBOURNE_OFFSET
-    t = time.localtime(int(melbourne))
-    return f"{t[3]:02d}:{t[4]:02d}"
+    def _should_be_on(self):
+        """LED ON: 8pm (20:00) to 7am (07:00)"""
+        hour = self._get_hour()
+        return hour >= 20 or hour < 7
 
-def should_led_be_on():
-    """
-    LED ON: 8pm (20:00) to 7am (07:00)
-    LED OFF: 7am (07:00) to 8pm (20:00)
-    """
-    hour = get_melbourne_hour()
-    return hour >= 20 or hour < 7
+    def update(self):
+        """Check and update LED state - call this in main loop"""
+        # Only check every CHECK_INTERVAL seconds
+        now = time.time()
+        if self.last_check != 0 and now - self.last_check < CHECK_INTERVAL:
+            return
+        self.last_check = now
 
-def update_led():
-    """Update LED state based on current time"""
-    if should_led_be_on():
-        led.on()
-        return "ON"
-    else:
-        led.off()
-        return "OFF"
+        # Update LED
+        if self._should_be_on():
+            self.led.on()
+            state = "ON"
+        else:
+            self.led.off()
+            state = "OFF"
 
-print("=" * 50)
-print("TASK 1: LED AUTO CONTROL (8pm - 7am)")
-print("=" * 50)
+        # Log state changes
+        if state != self.previous_state:
+            print(f"[LED] {state}")
+            self.previous_state = state
 
-print("\n🌐 Connecting to WiFi...")
-wifi.connect()
-
-print("⏰ Syncing time...")
-sync_time()
-
-print(f"\n📊 Current time: {get_time_str()}")
-print("📅 LED Schedule:")
-print("   ON:  8pm (20:00) to 7am (07:00)")
-print("   OFF: 7am (07:00) to 8pm (20:00)")
-print("=" * 50)
-
-state = update_led()
-print(f"\n[{get_time_str()}] LED is {state}")
-
-print("\n✅ LED auto-control running...")
-print("=" * 50)
-
-previous_state = state
-
-while True:
-    try:
-        current_state = update_led()
-
-        if current_state != previous_state:
-            print(f"\n[{get_time_str()}] LED switched to {current_state}")
-            previous_state = current_state
-
-        time.sleep(60)
-
-    except KeyboardInterrupt:
-        print("\n\n🛑 Stopping LED auto-control...")
-        led.off()
-        break
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-        time.sleep(60)
+    def cleanup(self):
+        """Clean up - call on shutdown"""
+        self.led.off()
