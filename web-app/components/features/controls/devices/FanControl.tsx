@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TOPICS } from "@/lib/mqtt";
 
 interface FanControlProps {
   isConnected: boolean;
@@ -28,14 +29,14 @@ export default function FanControl({
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button
-          onClick={() => sendCommand("home/commands/fan", "on", "Fan")}
+          onClick={() => sendCommand(TOPICS.fanCommand, "on", "Fan")}
           className="flex-1 bg-green-600 hover:bg-green-700"
           disabled={!isConnected}
         >
           Turn ON
         </Button>
         <Button
-          onClick={() => sendCommand("home/commands/fan", "off", "Fan")}
+          onClick={() => sendCommand(TOPICS.fanCommand, "off", "Fan")}
           variant="destructive"
           className="flex-1"
           disabled={!isConnected}

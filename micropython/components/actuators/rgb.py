@@ -2,9 +2,7 @@ from machine import Pin
 import neopixel
 import config
 
-
 class RGBStrip:
-    """RGB LED strip"""
     def __init__(self):
         self.np = neopixel.NeoPixel(Pin(config.RGB_LED_PIN), config.RGB_LED_COUNT)
         self.num_leds = config.RGB_LED_COUNT
@@ -16,7 +14,6 @@ class RGBStrip:
         self.np.write()
 
     def set_led(self, index, r, g, b):
-        """Set individual LED color"""
         self.np[index] = (r, g, b)  
         self.np.write()
 

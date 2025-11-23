@@ -1,9 +1,7 @@
 from machine import Pin, PWM
 import config
 
-
 class DoorServo:
-    """Door servo motor"""
     def __init__(self):
         self.pwm = PWM(Pin(config.DOOR_SERVO_PIN), freq=50)
         self.current_angle = 0

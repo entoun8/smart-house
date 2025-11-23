@@ -2,9 +2,7 @@ from machine import Pin
 import time
 import config
 
-
 class Buzzer:
-    """Buzzer control"""
     def __init__(self):
         self.pin = Pin(config.BUZZER_PIN, Pin.OUT)
         self.state = False
@@ -23,7 +21,6 @@ class Buzzer:
         self.off()
 
     def alarm(self, times=3):
-        """Sound alarm - multiple quick beeps"""
         for _ in range(times):
             self.on()
             time.sleep(0.2)

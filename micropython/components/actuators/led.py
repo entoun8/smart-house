@@ -2,9 +2,7 @@ from machine import Pin
 import time
 import config
 
-
 class LED:
-    """LED control"""
     def __init__(self):
         self.pin = Pin(config.LED_PIN, Pin.OUT)
         self.state = False

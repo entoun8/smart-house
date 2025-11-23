@@ -5,9 +5,7 @@ from config import MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT_CLIENT
 
 class MQTT:
     def __init__(self):
-        """Initialize MQTT (auto-loads settings from config)"""
         try:
-            # For SSL connection to HiveMQ Cloud
             if MQTT_PORT == 8883:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
                 context.verify_mode = ssl.CERT_NONE  # Skip cert verification
@@ -22,7 +20,6 @@ class MQTT:
                     ssl=context
                 )
             else:
-                # Non-SSL connection
                 params = {
                     'client_id': MQTT_CLIENT_ID,
                     'server': MQTT_BROKER,
@@ -40,7 +37,6 @@ class MQTT:
         self.connected = False
 
     def connect(self):
-        """Connect to MQTT broker"""
         try:
             if self.client:
                 self.client.connect()
@@ -53,18 +49,15 @@ class MQTT:
             return False
 
     def is_connected(self):
-        """Check if connected"""
         return self.connected
 
     def disconnect(self):
-        """Disconnect from broker"""
         if self.connected:
             self.client.disconnect()
             self.connected = False
             print("[MQTT] Disconnected")
 
     def publish(self, topic, message):
-        """Publish a message"""
         if not self.connected:
             return False
         try:
@@ -74,7 +67,6 @@ class MQTT:
             return False
 
     def subscribe(self, topic, callback):
-        """Subscribe to a topic"""
         if not self.connected:
             return False
         try:
@@ -85,7 +77,6 @@ class MQTT:
             return False
 
     def check_messages(self):
-        """Check for new messages (call in loop)"""
         if self.connected:
             try:
                 self.client.check_msg()

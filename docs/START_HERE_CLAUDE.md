@@ -1,6 +1,6 @@
 # 👋 Start Here (For Claude After Context Clear)
 
-**Last Updated:** 2025-11-18
+**Last Updated:** 2025-11-23
 
 When you clear context, read these files to understand the project quickly.
 
@@ -13,7 +13,7 @@ When you clear context, read these files to understand the project quickly.
 
 **What:** Complete project overview - everything you need to know
 **Contains:**
-- Project status (100% complete, 7/7 tasks)
+- Project status (100% complete, 8/8 tasks)
 - Quick start guide
 - All task descriptions
 - Project structure
@@ -81,7 +81,7 @@ When you clear context, read these files to understand the project quickly.
 
 ## 📊 Current Status Summary
 
-### ✅ Completed: 7 of 7 tasks (100%)
+### ✅ Completed: 8 of 8 tasks (100%)
 
 **Task 1:** LED Auto (8pm-7am) - Simple, no MQTT/DB
 **Task 2:** Temperature & Humidity - MQTT + DB + Web
@@ -90,6 +90,7 @@ When you clear context, read these files to understand the project quickly.
 **Task 5:** Gas Detection - MQTT + DB + Web (via bridge)
 **Task 6:** Asthma Alert - MQTT + Web (no DB)
 **Task 7:** RFID Access - MQTT + DB + Web (via bridge)
+**Task 8:** Device Control - Web → MQTT → ESP32 (door, window, fan)
 
 ### 🏗️ System Architecture
 
@@ -114,14 +115,16 @@ smart-house/
 ├── README.md                  # Project overview
 │
 ├── micropython/               # ESP32 code
-│   ├── boot.py               # Auto-starts all tasks
-│   ├── all_tasks.py          # Tasks 1-7 combined
+│   ├── boot.py               # Auto-starts main.py
+│   ├── main.py               # Tasks 1-8 combined
 │   ├── config.py             # Configuration
+│   ├── tasks/                # Task modules
 │   └── components/           # OOP classes
 │
 ├── web-app/                   # Next.js dashboard
 │   ├── app/page.tsx          # Main dashboard
 │   ├── app/rfid/page.tsx     # RFID logs
+│   ├── app/controls/page.tsx # Device controls
 │   └── components/           # React components
 │
 ├── docs/                      # Documentation
@@ -169,11 +172,11 @@ RUN.bat
 python unified_bridge.py
 
 # Upload code to ESP32
-ampy --port COM4 put micropython/all_tasks.py
-ampy --port COM4 put micropython/boot.py
+ampy --port COM5 put micropython/main.py
+ampy --port COM5 put micropython/boot.py
 
 # Monitor ESP32
-python -m serial.tools.miniterm COM4 115200
+python -m serial.tools.miniterm COM5 115200
 
 # Start web dashboard
 cd web-app
@@ -202,12 +205,12 @@ After context clear, you should have:
 
 ## 📝 Quick Reference
 
-**Port:** COM4
+**Port:** COM5
 **WiFi:** CyFi
 **Database:** Supabase (5 tables)
 **MQTT:** HiveMQ Cloud
 **Web:** http://localhost:3000
-**All Tasks:** Running on ESP32 via boot.py → all_tasks.py
+**All Tasks:** Running on ESP32 via boot.py → main.py
 
 ---
 

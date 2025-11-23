@@ -4,12 +4,9 @@ import { useEffect, useState } from "react";
 import { connectMQTT } from "@/lib/mqtt";
 import ControlsHeader from "./ControlsHeader";
 import ConnectionWarning from "./ConnectionWarning";
-import LedControl from "./devices/LedControl";
 import DoorControl from "./devices/DoorControl";
 import WindowControl from "./devices/WindowControl";
 import FanControl from "./devices/FanControl";
-import BuzzerControl from "./devices/BuzzerControl";
-import RgbControl from "./devices/RgbControl";
 
 export default function ControlsContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,12 +46,9 @@ export default function ControlsContent() {
 
       {/* Controls Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <LedControl isConnected={isConnected} sendCommand={sendCommand} />
         <DoorControl isConnected={isConnected} sendCommand={sendCommand} />
         <WindowControl isConnected={isConnected} sendCommand={sendCommand} />
         <FanControl isConnected={isConnected} sendCommand={sendCommand} />
-        <BuzzerControl isConnected={isConnected} sendCommand={sendCommand} />
-        <RgbControl isConnected={isConnected} sendCommand={sendCommand} />
       </div>
 
       {/* Connection Warning */}

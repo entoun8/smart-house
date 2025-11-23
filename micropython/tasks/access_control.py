@@ -1,60 +1,64 @@
-"""Task 7: RFID Access Control -> MQTT"""
-
 import time
-from components import RFID, Buzzer, DoorServo
+from machine import Pin, PWM
+from components import RFID, Buzzer
 from config import TOPICS
+import config
 
-SCAN_COOLDOWN = 3  # Seconds between same card scans
+SCAN_COOLDOWN = 3  
 
+AUTHORIZED_CARD = "0x7cdab502"  
 
 class AccessControlTask:
     def __init__(self, mqtt, rgb_controller):
         self.rfid = RFID()
         self.buzzer = Buzzer()
-        self.door = DoorServo()
+        self.door_pwm = PWM(Pin(config.DOOR_SERVO_PIN), freq=50)
+        self.door_close()  
         self.mqtt = mqtt
         self.rgb = rgb_controller
         self.last_card = None
         self.last_scan = 0
 
+    def door_open(self):
+        self.door_pwm.duty(128)  
+
+    def door_close(self):
+        self.door_pwm.duty(26)   
+
     def update(self):
-        """Check for RFID scans - call this in main loop"""
         card_id = self.rfid.scan()
         now = time.time()
 
         if card_id and (card_id != self.last_card or now - self.last_scan > SCAN_COOLDOWN):
             print(f"[RFID] Scanned: {card_id}")
-            self.mqtt.publish(TOPICS.event("rfid_scan"), f'{{"card":"{card_id}","action":"check"}}')
-
-            # Flash green as acknowledgment
-            self.rgb.rgb.green()
-            time.sleep(1)
-            self.rgb.rgb.off()
-
             self.last_card = card_id
             self.last_scan = now
 
-    def handle_authorized(self, card_id):
-        """Called when card is authorized (from MQTT callback)"""
-        print(f"[RFID] Authorized: {card_id}")
-        self.door.open()
-        self.rgb.rgb.green()
-        time.sleep(2)
-        self.rgb.rgb.off()
-        time.sleep(3)
-        self.door.close()
+            if card_id == AUTHORIZED_CARD:
+                print("[RFID] ACCESS GRANTED!")
+                self.mqtt.publish(TOPICS.event("rfid_scan"),
+                    f'{{"card":"{card_id}","status":"authorized"}}')
 
-    def handle_unauthorized(self, card_id):
-        """Called when card is unauthorized (from MQTT callback)"""
-        print(f"[RFID] Unauthorized: {card_id}")
-        for _ in range(3):
-            self.rgb.rgb.red()
-            self.buzzer.on()
-            time.sleep(0.3)
-            self.rgb.rgb.off()
-            self.buzzer.off()
-            time.sleep(0.3)
+                self.rgb.rgb.green()
+                self.door_open()
+                time.sleep(3)
+                self.door_close()
+                self.rgb.rgb.off()
+
+            else:
+                print("[RFID] ACCESS DENIED!")
+                self.mqtt.publish(TOPICS.event("rfid_scan"),
+                    f'{{"card":"{card_id}","status":"unauthorized"}}')
+
+                for _ in range(3):
+                    self.rgb.rgb.red()
+                    self.buzzer.on()
+                    time.sleep(0.2)
+                    self.rgb.rgb.off()
+                    self.buzzer.off()
+                    time.sleep(0.2)
 
     def cleanup(self):
         self.buzzer.off()
-        self.door.close()
+        self.door_close()
+        self.door_pwm.deinit()

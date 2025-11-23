@@ -1,7 +1,7 @@
 # Smart House IoT Project - Complete Guide
 
-**Last Updated:** 2025-11-18
-**Status:** 100% Complete (7/7 tasks) 🎉
+**Last Updated:** 2025-11-23
+**Status:** 100% Complete (8/8 tasks) 🎉
 
 ---
 
@@ -43,7 +43,7 @@ User
 
 ---
 
-## ✅ Completed Tasks (7/7)
+## ✅ Completed Tasks (8/8)
 
 ### Task 1: LED Auto Control
 - **File:** [micropython/task1_led_simple.py](../micropython/task1_led_simple.py)
@@ -79,6 +79,11 @@ User
 - **Files:** [task7_rfid_access.py](../micropython/task7_rfid_access.py), [rfid/page.tsx](../web-app/app/rfid/page.tsx)
 - **What:** Scan RFID → Check DB → Open door or deny + buzz
 - **Implementation:** Serial → Bridge → Database + MQTT
+
+### Task 8: Device Control (Web App)
+- **Files:** [device_control.py](../micropython/tasks/device_control.py), [ControlsContent.tsx](../web-app/components/features/controls/ControlsContent.tsx)
+- **What:** Control door, window, fan remotely via web app
+- **Implementation:** Web App → MQTT → ESP32
 
 ---
 

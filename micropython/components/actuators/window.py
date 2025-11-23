@@ -1,9 +1,7 @@
 from machine import Pin, PWM
 import config
 
-
 class WindowServo:
-    """Window servo motor"""
     def __init__(self):
         self.pwm = PWM(Pin(config.WINDOW_SERVO_PIN), freq=50)
         self.current_angle = 0

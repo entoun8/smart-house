@@ -1,14 +1,45 @@
 # MFRC522 I2C Driver for MicroPython
-from soft_iic import SoftI2C
-import mfrc522_config as config
+# Fixed for KS5009 Smart Home Kit
+from machine import Pin, I2C
 import time
 
+# Import config if available, otherwise use defaults
+try:
+    import mfrc522_config as config
+except:
+    class config:
+        MI_OK = 0
+        MI_ERR = 2
+        PCD_RESETPHASE = 0x0F
+        PCD_TRANSCEIVE = 0x0C
+        PCD_AUTHENT = 0x0E
+        PICC_REQIDL = 0x26
+        PICC_ANTICOLL = 0x93
+        CommandReg = 0x01
+        CommIEnReg = 0x02
+        CommIrqReg = 0x04
+        ErrorReg = 0x06
+        FIFODataReg = 0x09
+        FIFOLevelReg = 0x0A
+        ControlReg = 0x0C
+        BitFramingReg = 0x0D
+        ModeReg = 0x11
+        TxControlReg = 0x14
+        TxAutoReg = 0x15
+        RFCfgReg = 0x26
+        TModeReg = 0x2A
+        TPrescalerReg = 0x2B
+        TReloadRegH = 0x2C
+        TReloadRegL = 0x2D
+
+
 class MFRC522_I2C:
-    """MFRC522 RFID reader driver using I2C"""
+    """MFRC522 RFID reader driver using I2C (fixed for KS5009)"""
 
     def __init__(self, scl=22, sda=21, addr=0x28):
         self.addr = addr
-        self.i2c = SoftI2C(scl, sda, freq=100000)
+        # Use hardware I2C for better reliability
+        self.i2c = I2C(0, scl=Pin(scl), sda=Pin(sda), freq=400000)
         self.init_device()
 
     def _write_reg(self, reg, val):
@@ -22,17 +53,15 @@ class MFRC522_I2C:
         """Read from MFRC522 register"""
         try:
             self.i2c.writeto(self.addr, bytes([reg]))
-            time.sleep_us(100)
-            data = self.i2c.readfrom(self.addr, 1)
-            return data[0]
+            return self.i2c.readfrom(self.addr, 1)[0]
         except:
             return 0
 
     def init_device(self):
         """Initialize MFRC522"""
-        # Reset
+        # Hard reset
         self._write_reg(config.CommandReg, config.PCD_RESETPHASE)
-        time.sleep_ms(50)
+        time.sleep_ms(100)
 
         # Timer config
         self._write_reg(config.TModeReg, 0x8D)
@@ -44,10 +73,12 @@ class MFRC522_I2C:
         self._write_reg(config.TxAutoReg, 0x40)
         self._write_reg(config.ModeReg, 0x3D)
 
-        # Turn on antenna
+        # Set maximum antenna gain (48dB)
+        self._write_reg(config.RFCfgReg, 0x70)
+
+        # Turn on BOTH antenna outputs
         val = self._read_reg(config.TxControlReg)
-        if (val & 0x03) != 0x03:
-            self._write_reg(config.TxControlReg, val | 0x03)
+        self._write_reg(config.TxControlReg, val | 0x03)
 
     def _to_card(self, command, data):
         """Send command to card"""
@@ -75,7 +106,9 @@ class MFRC522_I2C:
         self._write_reg(config.CommandReg, command)
 
         if command == config.PCD_TRANSCEIVE:
-            self._write_reg(config.BitFramingReg, 0x80)
+            # Set StartSend bit to start transmission
+            val = self._read_reg(config.BitFramingReg)
+            self._write_reg(config.BitFramingReg, val | 0x80)
 
         # Wait for command to complete
         i = 2000

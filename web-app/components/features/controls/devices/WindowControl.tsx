@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TOPICS } from "@/lib/mqtt";
 
 interface WindowControlProps {
   isConnected: boolean;
@@ -28,16 +29,14 @@ export default function WindowControl({
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button
-          onClick={() => sendCommand("home/commands/window", "open", "Window")}
+          onClick={() => sendCommand(TOPICS.windowCommand, "open", "Window")}
           className="flex-1 bg-green-600 hover:bg-green-700"
           disabled={!isConnected}
         >
           Open
         </Button>
         <Button
-          onClick={() =>
-            sendCommand("home/commands/window", "close", "Window")
-          }
+          onClick={() => sendCommand(TOPICS.windowCommand, "close", "Window")}
           variant="destructive"
           className="flex-1"
           disabled={!isConnected}

@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TOPICS } from "@/lib/mqtt";
 
 interface DoorControlProps {
   isConnected: boolean;
@@ -28,14 +29,14 @@ export default function DoorControl({
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button
-          onClick={() => sendCommand("home/commands/door", "open", "Door")}
+          onClick={() => sendCommand(TOPICS.doorCommand, "open", "Door")}
           className="flex-1 bg-green-600 hover:bg-green-700"
           disabled={!isConnected}
         >
           Open
         </Button>
         <Button
-          onClick={() => sendCommand("home/commands/door", "close", "Door")}
+          onClick={() => sendCommand(TOPICS.doorCommand, "close", "Door")}
           variant="destructive"
           className="flex-1"
           disabled={!isConnected}

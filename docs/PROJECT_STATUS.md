@@ -1,6 +1,6 @@
 # 📊 Smart House Project - Current Status
 
-**Last Updated:** 2025-11-17 (Task 5 Complete)
+**Last Updated:** 2025-11-23 (Task 8 Complete)
 
 ---
 
@@ -190,7 +190,36 @@ python esp32_mqtt_bridge.py
 
 **See:** [TASK7_RFID_ACCESS.md](TASK7_RFID_ACCESS.md)
 
-**Note:** Device manual controls (door/window/fan via web) will be added in future update.
+---
+
+### Task 8: Device Control (Web App) ✅
+**Requirements:**
+- Web App: Open window and door via web app
+- Web App: Turn on fan via web app
+
+**Implementation:**
+- ESP32: [tasks/device_control.py](../micropython/tasks/device_control.py)
+- Web: [ControlsContent.tsx](../web-app/components/features/controls/ControlsContent.tsx)
+- Web: [DoorControl.tsx](../web-app/components/features/controls/devices/DoorControl.tsx)
+- Web: [WindowControl.tsx](../web-app/components/features/controls/devices/WindowControl.tsx)
+- Web: [FanControl.tsx](../web-app/components/features/controls/devices/FanControl.tsx)
+- MQTT Topics: `ks5009/house/devices/door/command`, `ks5009/house/devices/window/command`, `ks5009/house/devices/fan/command`
+
+**How it works:**
+1. User clicks button on web dashboard (Door/Window/Fan)
+2. Web app publishes MQTT command to broker
+3. ESP32 subscribed to `ks5009/house/devices/+/command`
+4. ESP32 receives command and controls actuator
+5. Door opens/closes, Window opens/closes, Fan turns on/off
+
+**Status:** ✅ 100% COMPLETE
+
+**Key Features:**
+- ✅ Door open/close via web
+- ✅ Window open/close via web
+- ✅ Fan on/off via web
+- ✅ Direct MQTT communication (no bridge needed)
+- ✅ Integrated in main.py as DeviceControlTask
 
 ---
 

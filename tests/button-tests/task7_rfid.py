@@ -1,29 +1,47 @@
 """
-Task 7: RFID Access Control - BUTTON TEST VERSION
-Press LEFT button to simulate authorized access
-Press RIGHT button to simulate unauthorized access
+Task 7: RFID Access Control
+Scans actual RFID cards for access control
 Press BOTH buttons to stop test
 Publishes to MQTT for website updates
 """
 
 import time
-from machine import Pin
-from components import DoorServo, Buzzer, RGBStrip, WiFi, MQTT
+import sys
+sys.path.append('/lib')
+from machine import Pin, PWM
+from components import Buzzer, RGBStrip, WiFi, MQTT
+from mfrc522_i2c import MFRC522_I2C
 from config import TOPICS
+import config
 
 print("\n" + "="*50)
-print("TASK 7: RFID ACCESS (Button Test)")
+print("TASK 7: RFID ACCESS CONTROL")
 print("="*50)
 
 # Components
-door = DoorServo()
 buzzer = Buzzer()
 rgb = RGBStrip()
 btn_left = Pin(16, Pin.IN, Pin.PULL_UP)
 btn_right = Pin(27, Pin.IN, Pin.PULL_UP)
 
+# Door servo - direct control for reliability
+door_pwm = PWM(Pin(config.DOOR_SERVO_PIN), freq=50)
+
+def door_open():
+    print("Opening door...")
+    door_pwm.duty(128)  # 180 degrees
+
+def door_close():
+    print("Closing door...")
+    door_pwm.duty(26)   # 0 degrees
+
+# Initialize RFID reader
+print("\n[RFID] Initializing...")
+rfid = MFRC522_I2C(scl=22, sda=21, addr=0x28)
+print("[RFID] Ready!")
+
 # Connect WiFi and MQTT
-print("\n[WiFi] Connecting...")
+print("[WiFi] Connecting...")
 wifi = WiFi()
 wifi.connect()
 
@@ -38,97 +56,101 @@ except Exception as e:
     print(f"[MQTT] Failed: {e}")
 
 # Start with door closed, RGB off
-door.close()
+door_close()
 buzzer.off()
 rgb.off()
 
-# Simulated card IDs
-AUTHORIZED_CARD = "0x12345678"
-UNAUTHORIZED_CARD = "0xAABBCCDD"
+# CARD CONFIGURATION
+# White card = AUTHORIZED (opens door)
+# Blue keychain = DENIED (buzzer + red flash)
+AUTHORIZED_CARD = "0x7cdab502"  # White card - AUTHORIZED
+DENIED_CARD = "0x5a6e25b6"      # Blue keychain - DENIED
 
 print("\nDoor is CLOSED")
-print("\nLEFT button: Authorized (Green + Open door)")
-print("RIGHT button: Unauthorized (Red + Buzzer)")
-print("BOTH buttons: Stop test")
+print(f"\nAuthorized: {AUTHORIZED_CARD} (white card)")
+print(f"Denied: {DENIED_CARD} (blue keychain)")
+print("\nHold RFID card near reader to scan")
+print("Press BOTH buttons to stop test")
 print("="*50)
 
-last_left = 1
-last_right = 1
+last_card = None
+last_scan_time = 0
 
 while True:
-    current_left = btn_left.value()
-    current_right = btn_right.value()
-
-    # Both buttons - stop test
-    if current_left == 0 and current_right == 0:
+    # Check for exit (both buttons)
+    if btn_left.value() == 0 and btn_right.value() == 0:
         print("\n" + "="*50)
         print("STOPPING TEST...")
         print("="*50)
-        door.close()
+        door_close()
         buzzer.off()
         rgb.off()
+        door_pwm.deinit()
         if mqtt_connected:
             mqtt.disconnect()
         break
 
-    # LEFT button - authorized access
-    if current_left == 0 and last_left == 1:
-        time.sleep(0.05)  # Debounce
+    # Scan for RFID card
+    card_id = rfid.scan()
 
-        print("\n" + "="*50)
-        print(f"RFID card scanned: {AUTHORIZED_CARD}")
-        print("="*50)
+    if card_id:
+        # Debounce - don't read same card repeatedly
+        current_time = time.time()
+        if card_id != last_card or (current_time - last_scan_time) > 3:
+            last_card = card_id
+            last_scan_time = current_time
 
-        # Publish to MQTT (website)
-        if mqtt_connected:
-            mqtt.publish(TOPICS.event("rfid_scan"), f'{{"card":"{AUTHORIZED_CARD}","status":"authorized"}}')
-            print("[MQTT] Published rfid_scan: authorized")
+            print("\n" + "="*50)
+            print(f"Card scanned: {card_id}")
+            print("="*50)
 
-        print("ACCESS GRANTED!")
-        print("Opening door...")
+            if card_id == AUTHORIZED_CARD:
+                # AUTHORIZED - Open door
+                print("ACCESS GRANTED!")
 
-        # Open door
-        door.open()
-        rgb.green()
-        time.sleep(3)
+                # Publish to MQTT
+                if mqtt_connected:
+                    try:
+                        mqtt.publish(TOPICS.event("rfid_scan"),
+                            f'{{"card":"{card_id}","status":"authorized"}}')
+                        print("[MQTT] Published: authorized")
+                    except Exception as e:
+                        print(f"[MQTT] Error: {e}")
 
-        # Close door
-        print("Closing door...")
-        door.close()
-        rgb.off()
+                # Open door with green LED
+                rgb.green()
+                door_open()
 
-        print(f"Access complete: {AUTHORIZED_CARD}")
-        print("="*50)
+                time.sleep(3)
 
-    # RIGHT button - unauthorized access
-    if current_right == 0 and last_right == 1:
-        time.sleep(0.05)  # Debounce
+                # Close door
+                door_close()
+                rgb.off()
 
-        print("\n" + "="*50)
-        print(f"RFID card scanned: {UNAUTHORIZED_CARD}")
-        print("="*50)
+            else:
+                # UNAUTHORIZED - Deny access
+                print("ACCESS DENIED!")
 
-        # Publish to MQTT (website)
-        if mqtt_connected:
-            mqtt.publish(TOPICS.event("rfid_scan"), f'{{"card":"{UNAUTHORIZED_CARD}","status":"unauthorized"}}')
-            print("[MQTT] Published rfid_scan: unauthorized")
+                # Publish to MQTT
+                if mqtt_connected:
+                    try:
+                        mqtt.publish(TOPICS.event("rfid_scan"),
+                            f'{{"card":"{card_id}","status":"unauthorized"}}')
+                        print("[MQTT] Published: unauthorized")
+                    except Exception as e:
+                        print(f"[MQTT] Error: {e}")
 
-        print("ACCESS DENIED!")
+                # Flash red and buzzer
+                for _ in range(3):
+                    rgb.red()
+                    buzzer.on()
+                    time.sleep(0.2)
+                    rgb.off()
+                    buzzer.off()
+                    time.sleep(0.2)
 
-        # Flash red and buzzer
-        for _ in range(3):
-            rgb.red()
-            buzzer.on()
-            time.sleep(0.3)
-            rgb.off()
-            buzzer.off()
-            time.sleep(0.3)
+            print("="*50)
 
-        print(f"Unauthorized: {UNAUTHORIZED_CARD}")
-        print("="*50)
-
-    last_left = current_left
-    last_right = current_right
     time.sleep(0.1)
 
 print("Test ended.")

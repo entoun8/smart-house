@@ -59,12 +59,38 @@ export default function RfidPage() {
       });
     });
 
-    const handleMessage = (topic: string, message: Buffer) => {
+    const handleMessage = async (topic: string, message: Buffer) => {
       if (topic === "ks5009/house/events/rfid_scan") {
         console.log(
           "🔑 [RfidPage] RFID scan from MQTT:",
           message.toString()
         );
+
+        // Parse the MQTT message and insert into database
+        try {
+          const data = JSON.parse(message.toString());
+          // Expected format: {"card":"0x7cdab502","status":"authorized"}
+
+          const cardId = data.card;
+          const isAuthorized = data.status === "authorized";
+
+          // Insert into Supabase
+          const { error } = await supabase
+            .from("rfid_scans")
+            .insert({
+              card_id: cardId,
+              success: isAuthorized,
+              timestamp: new Date().toISOString(),
+            });
+
+          if (error) {
+            console.error("Failed to insert RFID scan:", error);
+          } else {
+            console.log("✅ RFID scan saved to database");
+          }
+        } catch (e) {
+          console.error("Failed to parse RFID message:", e);
+        }
 
         // Refresh data when new scan detected
         fetchScans();
