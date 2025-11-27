@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { connectMQTT, TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 import { Activity } from "lucide-react";
 import {
   Card,
@@ -17,53 +17,13 @@ export default function MotionStatus() {
   const [lastDetection, setLastDetection] = useState<string>("");
 
   useEffect(() => {
-    console.log("[MotionStatus] Component mounted");
-    console.log("[MotionStatus] TOPICS.motion:", TOPICS.motion);
-
-    const client = connectMQTT();
-    console.log("[MotionStatus] MQTT client created");
-
-    client.on("connect", () => {
-      console.log(
-        "[MotionStatus] MQTT connected, subscribing to:",
-        TOPICS.motion
-      );
-
-      client.subscribe(TOPICS.motion, (err) => {
-        if (!err) {
-          console.log("[MotionStatus] ✅ Subscribed to", TOPICS.motion);
-        } else {
-          console.error("[MotionStatus] ❌ Subscribe failed:", err);
-        }
-      });
+    subscribe(TOPICS.motion, async () => {
+      setLastDetection(new Date().toLocaleTimeString());
+      setMotionCount((prev) => prev + 1);
+      await supabase.from("motion_logs").insert({});
     });
 
-    const handleMessage = async (topic: string, message: Buffer) => {
-      if (topic === TOPICS.motion) {
-        console.log(
-          "🚨 [MotionStatus] Motion detected from MQTT:",
-          message.toString()
-        );
-        setLastDetection(new Date().toLocaleTimeString());
-        setMotionCount((prev) => prev + 1);
-
-        // Log to database so it persists after refresh
-        const { error } = await supabase.from("motion_logs").insert({});
-        if (error) {
-          console.error("[MotionStatus] DB log failed:", error);
-        } else {
-          console.log("[MotionStatus] ✅ Logged to database");
-        }
-      }
-    };
-
-    client.on("message", handleMessage);
-
     fetchMotionCount();
-
-    return () => {
-      client.off("message", handleMessage);
-    };
   }, []);
 
   const fetchMotionCount = async () => {

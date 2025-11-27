@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { DoorOpen } from "lucide-react";
 import {
   Card,
@@ -7,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 
 interface DoorControlProps {
   isConnected: boolean;
@@ -18,6 +21,14 @@ export default function DoorControl({
   isConnected,
   sendCommand,
 }: DoorControlProps) {
+  const [status, setStatus] = useState<string>("close");
+
+  useEffect(() => {
+    subscribe(TOPICS.doorState, (message) => {
+      setStatus(message);
+    });
+  }, []);
+
   return (
     <Card>
       <CardHeader>
@@ -25,7 +36,11 @@ export default function DoorControl({
           <DoorOpen className="w-6 h-6 text-blue-400" />
           Door Servo
         </CardTitle>
-        <CardDescription>Door servo on GPIO 13</CardDescription>
+        <CardDescription>
+          Status: <span className={`font-bold ${status === "open" ? "text-green-500" : status === "close" ? "text-red-500" : "text-gray-500"}`}>
+            {status.toUpperCase()}
+          </span>
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Wind as Window } from "lucide-react";
 import {
   Card,
@@ -7,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 
 interface WindowControlProps {
   isConnected: boolean;
@@ -18,6 +21,14 @@ export default function WindowControl({
   isConnected,
   sendCommand,
 }: WindowControlProps) {
+  const [status, setStatus] = useState<string>("close");
+
+  useEffect(() => {
+    subscribe(TOPICS.windowState, (message) => {
+      setStatus(message);
+    });
+  }, []);
+
   return (
     <Card>
       <CardHeader>
@@ -25,7 +36,11 @@ export default function WindowControl({
           <Window className="w-6 h-6 text-cyan-400" />
           Window Servo
         </CardTitle>
-        <CardDescription>Window servo on GPIO 5</CardDescription>
+        <CardDescription>
+          Status: <span className={`font-bold ${status === "open" ? "text-green-500" : status === "close" ? "text-red-500" : "text-gray-500"}`}>
+            {status.toUpperCase()}
+          </span>
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button

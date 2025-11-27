@@ -12,6 +12,7 @@ export const TOPICS = {
 
   temperature: "ks5009/house/sensors/temperature",
   humidity: "ks5009/house/sensors/humidity",
+  climate: "ks5009/house/sensors/climate",
 
   motion: "ks5009/house/events/motion_detected",
   gas: "ks5009/house/events/gas_detected",
@@ -36,22 +37,12 @@ export function connectMQTT() {
     return client;
   }
 
-  console.log("Connecting to MQTT...");
-
   client = mqtt.connect(MQTT_CONFIG.broker, {
     username: MQTT_CONFIG.username,
     password: MQTT_CONFIG.password,
     clientId: "webapp-" + Math.random().toString(16).slice(2, 10),
     clean: true,
     reconnectPeriod: 5000,
-  });
-
-  client.on("connect", () => {
-    console.log("✅ MQTT connected!");
-  });
-
-  client.on("error", (error) => {
-    console.error("❌ MQTT error:", error);
   });
 
   return client;
@@ -62,11 +53,7 @@ export function subscribe(topic: string, callback: (message: string) => void) {
     client = connectMQTT();
   }
 
-  client.subscribe(topic, (err) => {
-    if (!err) {
-      console.log(`Subscribed to ${topic}`);
-    }
-  });
+  client.subscribe(topic);
 
   client.on("message", (receivedTopic, message) => {
     if (receivedTopic === topic) {

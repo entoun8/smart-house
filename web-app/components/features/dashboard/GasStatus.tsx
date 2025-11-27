@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { connectMQTT, TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 import { Flame } from "lucide-react";
 import {
   Card,
@@ -16,83 +16,40 @@ export default function GasStatus() {
   const [gasDetected, setGasDetected] = useState<boolean>(false);
   const [lastDetection, setLastDetection] = useState<string>("");
   const [detectionCount, setDetectionCount] = useState<number>(0);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    console.log("[GasStatus] Component mounted");
-    console.log("[GasStatus] TOPICS.gas:", TOPICS.gas);
+    subscribe(TOPICS.gas, async (message) => {
+      if (message === "1") {
+        setGasDetected(true);
+        setLastDetection(new Date().toLocaleTimeString());
+        setDetectionCount((prev) => prev + 1);
 
-    const client = connectMQTT();
-    console.log("[GasStatus] MQTT client created");
+        await supabase.from("gas_logs").insert({ value: 1 });
 
-    client.on("connect", () => {
-      console.log(
-        "[GasStatus] MQTT connected, subscribing to:",
-        TOPICS.gas
-      );
-
-      client.subscribe(TOPICS.gas, (err) => {
-        if (!err) {
-          console.log("[GasStatus] ✅ Subscribed to", TOPICS.gas);
-        } else {
-          console.error("[GasStatus] ❌ Subscribe failed:", err);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
         }
-      });
-    });
 
-    const handleMessage = (topic: string, message: Buffer) => {
-      if (topic === TOPICS.gas) {
-        const msg = message.toString();
-        console.log(
-          "🚨 [GasStatus] Gas message from MQTT:",
-          msg
-        );
-
-        // If gas is detected (value "1")
-        if (msg === "1") {
-          setGasDetected(true);
-          setLastDetection(new Date().toLocaleTimeString());
-          setDetectionCount((prev) => prev + 1);
-
-          // Log to database
-          supabase.from("gas_logs").insert({ value: 1 }).then(({ error }) => {
-            if (!error) console.log("[GasStatus] ✅ Logged to database");
-          });
-
-          // Clear any existing timeout
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-
-          // Auto-clear after 30 seconds of no updates (safety)
-          const timeout = setTimeout(() => {
-            setGasDetected(false);
-            console.log("[GasStatus] Auto-cleared after 30s timeout");
-          }, 30000);
-          setTimeoutId(timeout);
-        }
-        // If gas cleared (value "0")
-        else if (msg === "0") {
+        timeoutRef.current = setTimeout(() => {
           setGasDetected(false);
-          console.log("[GasStatus] Gas cleared");
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
+        }, 30000);
+      } else if (message === "0") {
+        setGasDetected(false);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
         }
       }
-    };
-
-    client.on("message", handleMessage);
+    });
 
     fetchGasCount();
 
     return () => {
-      client.off("message", handleMessage);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-  }, [timeoutId]);
+  }, []);
 
   const fetchGasCount = async () => {
     const { data, count } = await supabase
@@ -105,7 +62,11 @@ export default function GasStatus() {
   };
 
   return (
-    <Card className={`hover:shadow-lg transition-all ${gasDetected ? 'border-red-500 border-2' : ''}`}>
+    <Card
+      className={`hover:shadow-lg transition-all ${
+        gasDetected ? "border-red-500 border-2" : ""
+      }`}
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
           <Flame

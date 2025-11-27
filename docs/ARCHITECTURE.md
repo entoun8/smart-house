@@ -34,25 +34,29 @@
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                   COMMUNICATION LAYER                           │
-│  📡 MQTT Broker (Message Hub)                                   │
+│  📡 HiveMQ Cloud MQTT Broker (Message Hub)                      │
 │  Topics:                                                        │
-│    - home/temperature                                           │
-│    - home/motion                                                │
-│    - home/gas                                                   │
-│    - home/commands/door                                         │
-│    - home/commands/fan                                          │
+│    - ks5009/house/sensors/climate                               │
+│    - ks5009/house/events/motion_detected                        │
+│    - ks5009/house/events/gas_detected                           │
+│    - ks5009/house/devices/door/command                          │
+│    - ks5009/house/devices/door/state                            │
+│    - ks5009/house/devices/fan/command                           │
+│    - ks5009/house/devices/fan/state                             │
+│    - ks5009/house/devices/window/command                        │
+│    - ks5009/house/devices/window/state                          │
 └────────────────────────────┬────────────────────────────────────┘
                              │
-                             │ WiFi (MQTT Protocol)
+                             │ WiFi (MQTT over TLS)
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    EDGE DEVICE LAYER                            │
 │  🏠 ESP32 Smart Home (MicroPython)                              │
-│  IP: 10.52.126.34                                               │
-│  - Reads sensors every 0.1s                                     │
+│  - Reads sensors every 0.5s                                     │
 │  - Controls actuators                                           │
-│  - Publishes data to MQTT                                       │
-│  - Subscribes to commands                                       │
+│  - Publishes sensor data & events to MQTT                       │
+│  - Subscribes to device commands                                │
+│  - Publishes device state updates                               │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              │ GPIO Pins
@@ -74,13 +78,13 @@
 ```
 1. DHT11 Sensor measures temperature
            ↓
-2. ESP32 reads sensor (every 30 minutes)
+2. ESP32 reads sensor (every 15 minutes)
    temp = dht.temperature()  # 23°C
            ↓
 3. ESP32 publishes to MQTT
-   mqtt.publish("home/temperature", {"temp": 23, "humidity": 41})
+   mqtt.publish("ks5009/house/sensors/climate", '{"temp": 23, "humidity": 41}')
            ↓
-4. MQTT Broker receives message
+4. HiveMQ Cloud MQTT Broker receives message
            ↓
 5. Next.js Web App subscribed to topic
    Receives: {"temp": 23, "humidity": 41}
@@ -92,7 +96,7 @@
    User sees: "🌡️ 23°C, 💧 41%"
 ```
 
-**Developer Note**: This is a **publish-subscribe pattern** - ESP32 doesn't know who's listening, it just publishes data.
+**Developer Note**: This is a **direct ESP32-to-Cloud pattern** - No Python bridge needed. ESP32 connects directly to cloud MQTT broker.
 
 ---
 
@@ -102,26 +106,26 @@
 1. User clicks "Open Door" button on web app
            ↓
 2. Web App publishes MQTT message
-   mqtt.publish("home/commands/door", "open")
+   mqtt.publish("ks5009/house/devices/door/command", "open")
            ↓
-3. MQTT Broker routes message
+3. HiveMQ Cloud MQTT Broker routes message
            ↓
-4. ESP32 subscribed to "home/commands/door"
-   Receives: "open"
+4. ESP32 subscribed to "ks5009/house/devices/+/command"
+   Receives: "open" on door/command topic
            ↓
 5. ESP32 executes command
    door_servo.duty(128)  # Rotate to open position
            ↓
 6. Door physically opens
            ↓
-7. ESP32 confirms action
-   mqtt.publish("home/status/door", "opened")
+7. ESP32 publishes state confirmation
+   mqtt.publish("ks5009/house/devices/door/state", "open")
            ↓
-8. Web App updates UI
-   Button shows: "Door: OPEN ✅"
+8. Web App receives state update
+   Updates UI: "Door: OPEN ✅" (green)
 ```
 
-**Developer Note**: This is **bidirectional communication** - commands go down, confirmations come up.
+**Developer Note**: This is **bidirectional communication** with state feedback - commands go down, state confirmations come back up.
 
 ---
 

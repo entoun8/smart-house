@@ -20,13 +20,15 @@ export default function TemperatureStatus() {
   useEffect(() => {
     connectMQTT();
 
-    subscribe(TOPICS.temperature, (message) => {
-      const temp = parseFloat(message);
-      setTemperature(temp);
+    subscribe(TOPICS.climate, async (message) => {
+      const data = JSON.parse(message);
+      setTemperature(data.temp);
       setLastUpdate(new Date().toLocaleTimeString());
-      console.log("Temperature from MQTT:", temp);
-      // Store for HumidityStatus to log both together
-      localStorage.setItem("lastTemp", temp.toString());
+
+      await supabase.from("temperature_logs").insert({
+        temp: data.temp,
+        humidity: data.humidity
+      });
     });
 
     const fetchInitialTemperature = async () => {

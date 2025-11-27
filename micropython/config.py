@@ -35,9 +35,9 @@ RGB_LED_COUNT = 4
 WIFI_SSID = "Telstra099B26"
 WIFI_PASSWORD = "56jh79sqcfx6vnta"
 
-# MQTT Broker (HiveMQ Cloud with SSL)
+# MQTT Broker 
 MQTT_BROKER = "26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud"
-MQTT_PORT = 8883  # SSL port
+MQTT_PORT = 8883 
 MQTT_USER = "smarthome"
 MQTT_PASSWORD = "SmartHome123!"
 MQTT_CLIENT_ID = "ks5009-smart-house"

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Fan } from "lucide-react";
 import {
   Card,
@@ -7,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 
 interface FanControlProps {
   isConnected: boolean;
@@ -18,6 +21,14 @@ export default function FanControl({
   isConnected,
   sendCommand,
 }: FanControlProps) {
+  const [status, setStatus] = useState<string>("off");
+
+  useEffect(() => {
+    subscribe(TOPICS.fanState, (message) => {
+      setStatus(message);
+    });
+  }, []);
+
   return (
     <Card>
       <CardHeader>
@@ -25,7 +36,11 @@ export default function FanControl({
           <Fan className="w-6 h-6 text-purple-400" />
           Fan Motor
         </CardTitle>
-        <CardDescription>DC motor on GPIO 18, 19</CardDescription>
+        <CardDescription>
+          Status: <span className={`font-bold ${status === "on" ? "text-green-500" : status === "off" ? "text-red-500" : "text-gray-500"}`}>
+            {status.toUpperCase()}
+          </span>
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button

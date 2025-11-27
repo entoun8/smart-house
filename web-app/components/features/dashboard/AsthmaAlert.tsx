@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { connectMQTT, TOPICS } from "@/lib/mqtt";
+import { subscribe, TOPICS } from "@/lib/mqtt";
 import { AlertTriangle } from "lucide-react";
 import {
   Card,
@@ -17,57 +17,29 @@ export default function AsthmaAlert() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const client = connectMQTT();
-    console.log("[AsthmaAlert] MQTT client created");
+    subscribe(TOPICS.asthma, (message) => {
+      if (message === "1") {
+        setAlertActive(true);
+        setLastAlert(new Date().toLocaleTimeString());
 
-    client.on("connect", () => {
-      console.log(
-        "[AsthmaAlert] MQTT connected, subscribing to:",
-        TOPICS.asthma
-      );
-
-      client.subscribe(TOPICS.asthma, (err) => {
-        if (!err) {
-          console.log("[AsthmaAlert] ✅ Subscribed to", TOPICS.asthma);
-        } else {
-          console.error("[AsthmaAlert] ❌ Subscribe failed:", err);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
         }
-      });
-    });
 
-    const handleMessage = (topic: string, message: Buffer) => {
-      if (topic === TOPICS.asthma) {
-        const msg = message.toString();
-        console.log("⚠️  [AsthmaAlert] Asthma alert message from MQTT:", msg);
-
-        if (msg === "1") {
-          setAlertActive(true);
-          setLastAlert(new Date().toLocaleTimeString());
-
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-          }
-
-          timeoutRef.current = setTimeout(() => {
-            setAlertActive(false);
-            console.log("[AsthmaAlert] Auto-cleared after 60s timeout");
-          }, 60000);
-        } else if (msg === "0") {
+        timeoutRef.current = setTimeout(() => {
           setAlertActive(false);
-          console.log("[AsthmaAlert] Alert cleared");
+        }, 60000);
+      } else if (message === "0") {
+        setAlertActive(false);
 
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
         }
       }
-    };
-
-    client.on("message", handleMessage);
+    });
 
     return () => {
-      client.off("message", handleMessage);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

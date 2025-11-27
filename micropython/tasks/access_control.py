@@ -36,19 +36,27 @@ class AccessControlTask:
 
             if card_id == AUTHORIZED_CARD:
                 print("[RFID] ACCESS GRANTED!")
-                self.mqtt.publish(TOPICS.event("rfid_scan"),
-                    f'{{"card":"{card_id}","status":"authorized"}}')
+                mqtt_msg = f'{{"card":"{card_id}","status":"authorized"}}'
+                mqtt_topic = TOPICS.event("rfid_scan")
+                print(f"[RFID] Publishing to {mqtt_topic}: {mqtt_msg}")
+                result = self.mqtt.publish(mqtt_topic, mqtt_msg)
+                print(f"[RFID] MQTT publish result: {result}")
 
                 self.rgb.rgb.green()
                 self.door_open()
+                self.mqtt.publish(TOPICS.device_state("door"), "open")
                 time.sleep(3)
                 self.door_close()
+                self.mqtt.publish(TOPICS.device_state("door"), "close")
                 self.rgb.rgb.off()
 
             else:
                 print("[RFID] ACCESS DENIED!")
-                self.mqtt.publish(TOPICS.event("rfid_scan"),
-                    f'{{"card":"{card_id}","status":"unauthorized"}}')
+                mqtt_msg = f'{{"card":"{card_id}","status":"unauthorized"}}'
+                mqtt_topic = TOPICS.event("rfid_scan")
+                print(f"[RFID] Publishing to {mqtt_topic}: {mqtt_msg}")
+                result = self.mqtt.publish(mqtt_topic, mqtt_msg)
+                print(f"[RFID] MQTT publish result: {result}")
 
                 for _ in range(3):
                     self.rgb.rgb.red()

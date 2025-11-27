@@ -18,30 +18,14 @@ export default function HumidityStatus() {
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
   useEffect(() => {
-    // Connect to MQTT
     connectMQTT();
 
-    // Subscribe to humidity topic (real-time updates from ESP32)
-    subscribe(TOPICS.humidity, async (message) => {
-      const hum = parseFloat(message);
-      setHumidity(hum);
+    subscribe(TOPICS.climate, (message) => {
+      const data = JSON.parse(message);
+      setHumidity(data.humidity);
       setLastUpdate(new Date().toLocaleTimeString());
-      console.log("Humidity from MQTT:", hum);
-
-      // Log to database (get temp from localStorage set by TemperatureStatus)
-      const tempStr = localStorage.getItem("lastTemp");
-      const temp = tempStr ? parseFloat(tempStr) : null;
-      if (temp !== null) {
-        const { error } = await supabase
-          .from("temperature_logs")
-          .insert({ temp, humidity: hum });
-        if (!error) {
-          console.log("✅ Temperature logged to DB:", temp, hum);
-        }
-      }
     });
 
-    // Fetch initial humidity from database (in case ESP32 is offline)
     const fetchInitialHumidity = async () => {
       const { data } = await supabase
         .from("temperature_logs")
@@ -58,7 +42,6 @@ export default function HumidityStatus() {
     fetchInitialHumidity();
   }, []);
 
-  // Determine humidity status
   const getHumidityStatus = () => {
     if (humidity === null) return { color: "secondary", label: "Unknown" };
     if (humidity < 30) return { color: "default", label: "Dry" };
@@ -89,7 +72,15 @@ export default function HumidityStatus() {
             {humidity !== null ? `${humidity}%` : "--"}
           </p>
           {humidity !== null && (
-            <Badge variant={status.color as "default" | "secondary" | "destructive" | "outline"}>
+            <Badge
+              variant={
+                status.color as
+                  | "default"
+                  | "secondary"
+                  | "destructive"
+                  | "outline"
+              }
+            >
               {status.label}
             </Badge>
           )}
