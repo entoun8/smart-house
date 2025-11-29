@@ -3,7 +3,7 @@ import mqtt from "mqtt";
 const MQTT_CONFIG = {
   broker: process.env.NEXT_PUBLIC_MQTT_BROKER || "wss://26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud:8884/mqtt",
   username: process.env.NEXT_PUBLIC_MQTT_USERNAME || "smarthome",
-  password: process.env.NEXT_PUBLIC_MQTT_PASSWORD || "SmartHome123!",
+  password: process.env.NEXT_PUBLIC_PASSWORD || "SmartHome123!",
 };
 
 export const TOPICS = {
@@ -55,11 +55,19 @@ export function subscribe(topic: string, callback: (message: string) => void) {
 
   client.subscribe(topic);
 
-  client.on("message", (receivedTopic, message) => {
+  const messageHandler = (receivedTopic: string, message: Buffer) => {
     if (receivedTopic === topic) {
       callback(message.toString());
     }
-  });
+  };
+
+  client.on("message", messageHandler);
+
+  // Return cleanup function to remove this specific listener
+  return () => {
+    client?.off("message", messageHandler);
+    client?.unsubscribe(topic);
+  };
 }
 
 export function publish(topic: string, message: string) {

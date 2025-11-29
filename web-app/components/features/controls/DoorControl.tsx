@@ -13,20 +13,18 @@ import { Button } from "@/components/ui/button";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 
 interface DoorControlProps {
-  isConnected: boolean;
-  sendCommand: (topic: string, message: string, label: string) => void;
+  sendCommand: (topic: string, message: string) => void;
 }
 
-export default function DoorControl({
-  isConnected,
-  sendCommand,
-}: DoorControlProps) {
+export default function DoorControl({ sendCommand }: DoorControlProps) {
   const [status, setStatus] = useState<string>("close");
 
   useEffect(() => {
-    subscribe(TOPICS.doorState, (message) => {
+    const unsubscribe = subscribe(TOPICS.doorState, (message) => {
       setStatus(message);
     });
+
+    return unsubscribe;
   }, []);
 
   return (
@@ -44,17 +42,15 @@ export default function DoorControl({
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button
-          onClick={() => sendCommand(TOPICS.doorCommand, "open", "Door")}
+          onClick={() => sendCommand(TOPICS.doorCommand, "open")}
           className="flex-1 bg-green-600 hover:bg-green-700"
-          disabled={!isConnected}
         >
           Open
         </Button>
         <Button
-          onClick={() => sendCommand(TOPICS.doorCommand, "close", "Door")}
+          onClick={() => sendCommand(TOPICS.doorCommand, "close")}
           variant="destructive"
           className="flex-1"
-          disabled={!isConnected}
         >
           Close
         </Button>

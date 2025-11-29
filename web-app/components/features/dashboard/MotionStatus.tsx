@@ -17,13 +17,15 @@ export default function MotionStatus() {
   const [lastDetection, setLastDetection] = useState<string>("");
 
   useEffect(() => {
-    subscribe(TOPICS.motion, async () => {
+    const unsubscribe = subscribe(TOPICS.motion, async () => {
       setLastDetection(new Date().toLocaleTimeString());
       setMotionCount((prev) => prev + 1);
       await supabase.from("motion_logs").insert({});
     });
 
     fetchMotionCount();
+
+    return unsubscribe;
   }, []);
 
   const fetchMotionCount = async () => {

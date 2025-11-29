@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import { Flame } from "lucide-react";
@@ -16,39 +16,22 @@ export default function GasStatus() {
   const [gasDetected, setGasDetected] = useState<boolean>(false);
   const [lastDetection, setLastDetection] = useState<string>("");
   const [detectionCount, setDetectionCount] = useState<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    subscribe(TOPICS.gas, async (message) => {
+    const unsubscribe = subscribe(TOPICS.gas, async (message) => {
       if (message === "1") {
         setGasDetected(true);
         setLastDetection(new Date().toLocaleTimeString());
         setDetectionCount((prev) => prev + 1);
-
         await supabase.from("gas_logs").insert({ value: 1 });
-
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-          setGasDetected(false);
-        }, 30000);
       } else if (message === "0") {
         setGasDetected(false);
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
       }
     });
 
     fetchGasCount();
 
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+    return unsubscribe;
   }, []);
 
   const fetchGasCount = async () => {

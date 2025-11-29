@@ -20,7 +20,7 @@ export default function HumidityStatus() {
   useEffect(() => {
     connectMQTT();
 
-    subscribe(TOPICS.climate, (message) => {
+    const unsubscribe = subscribe(TOPICS.climate, (message) => {
       const data = JSON.parse(message);
       setHumidity(data.humidity);
       setLastUpdate(new Date().toLocaleTimeString());
@@ -40,6 +40,8 @@ export default function HumidityStatus() {
     };
 
     fetchInitialHumidity();
+
+    return unsubscribe;
   }, []);
 
   const getHumidityStatus = () => {

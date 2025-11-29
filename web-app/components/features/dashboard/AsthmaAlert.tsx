@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import { AlertTriangle } from "lucide-react";
 import {
@@ -14,36 +14,18 @@ import {
 export default function AsthmaAlert() {
   const [alertActive, setAlertActive] = useState<boolean>(false);
   const [lastAlert, setLastAlert] = useState<string>("");
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    subscribe(TOPICS.asthma, (message) => {
+    const unsubscribe = subscribe(TOPICS.asthma, (message) => {
       if (message === "1") {
         setAlertActive(true);
         setLastAlert(new Date().toLocaleTimeString());
-
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-          setAlertActive(false);
-        }, 60000);
       } else if (message === "0") {
         setAlertActive(false);
-
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
       }
     });
 
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+    return unsubscribe;
   }, []);
 
   if (!alertActive) {

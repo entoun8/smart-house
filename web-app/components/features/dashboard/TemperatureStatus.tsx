@@ -20,7 +20,7 @@ export default function TemperatureStatus() {
   useEffect(() => {
     connectMQTT();
 
-    subscribe(TOPICS.climate, async (message) => {
+    const unsubscribe = subscribe(TOPICS.climate, async (message) => {
       const data = JSON.parse(message);
       setTemperature(data.temp);
       setLastUpdate(new Date().toLocaleTimeString());
@@ -45,6 +45,8 @@ export default function TemperatureStatus() {
     };
 
     fetchInitialTemperature();
+
+    return unsubscribe;
   }, []);
 
   const getTempStatus = (): {

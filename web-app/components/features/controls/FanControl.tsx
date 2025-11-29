@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wind as Window } from "lucide-react";
+import { Fan } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,51 +12,47 @@ import {
 import { Button } from "@/components/ui/button";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 
-interface WindowControlProps {
-  isConnected: boolean;
-  sendCommand: (topic: string, message: string, label: string) => void;
+interface FanControlProps {
+  sendCommand: (topic: string, message: string) => void;
 }
 
-export default function WindowControl({
-  isConnected,
-  sendCommand,
-}: WindowControlProps) {
-  const [status, setStatus] = useState<string>("close");
+export default function FanControl({ sendCommand }: FanControlProps) {
+  const [status, setStatus] = useState<string>("off");
 
   useEffect(() => {
-    subscribe(TOPICS.windowState, (message) => {
+    const unsubscribe = subscribe(TOPICS.fanState, (message) => {
       setStatus(message);
     });
+
+    return unsubscribe;
   }, []);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <Window className="w-6 h-6 text-cyan-400" />
-          Window Servo
+          <Fan className="w-6 h-6 text-purple-400" />
+          Fan Motor
         </CardTitle>
         <CardDescription>
-          Status: <span className={`font-bold ${status === "open" ? "text-green-500" : status === "close" ? "text-red-500" : "text-gray-500"}`}>
+          Status: <span className={`font-bold ${status === "on" ? "text-green-500" : status === "off" ? "text-red-500" : "text-gray-500"}`}>
             {status.toUpperCase()}
           </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="flex gap-3">
         <Button
-          onClick={() => sendCommand(TOPICS.windowCommand, "open", "Window")}
+          onClick={() => sendCommand(TOPICS.fanCommand, "on")}
           className="flex-1 bg-green-600 hover:bg-green-700"
-          disabled={!isConnected}
         >
-          Open
+          Turn ON
         </Button>
         <Button
-          onClick={() => sendCommand(TOPICS.windowCommand, "close", "Window")}
+          onClick={() => sendCommand(TOPICS.fanCommand, "off")}
           variant="destructive"
           className="flex-1"
-          disabled={!isConnected}
         >
-          Close
+          Turn OFF
         </Button>
       </CardContent>
     </Card>
