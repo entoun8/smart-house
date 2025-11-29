@@ -1,6 +1,7 @@
 import time
 from components import DHT
 from config import TOPICS
+import json
 
 LOG_INTERVAL = 900  
 
@@ -24,7 +25,6 @@ class TemperatureTask:
         temp = data['temp']
         humidity = data['humidity']
 
-        import json
         climate_data = json.dumps({"temp": temp, "humidity": humidity})
         self.mqtt.publish(TOPICS.sensor("climate"), climate_data)
 

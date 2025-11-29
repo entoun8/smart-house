@@ -1,14 +1,14 @@
 import time
-import sys
-sys.path.append('/lib')
 from machine import Pin, PWM
-from components import Buzzer, RGBStrip, WiFi, MQTT
+from components import Buzzer, WiFi
+from components.connectivity.mqtt_wrapper import MQTTWrapper
+from tasks.rgb_controller import RGBController
 from mfrc522_i2c import MFRC522_I2C
 from config import TOPICS
 import config
 
 buzzer = Buzzer()
-rgb = RGBStrip()
+rgb = RGBController()
 btn_left = Pin(16, Pin.IN, Pin.PULL_UP)
 btn_right = Pin(27, Pin.IN, Pin.PULL_UP)
 
@@ -25,16 +25,12 @@ rfid = MFRC522_I2C(scl=22, sda=21, addr=0x28)
 wifi = WiFi()
 wifi.connect()
 
-mqtt = MQTT()
-mqtt_connected = False
-try:
-    mqtt_connected = mqtt.connect()
-except:
-    pass
+mqtt = MQTTWrapper()
+mqtt_connected = mqtt.connect()
 
 door_close()
 buzzer.off()
-rgb.off()
+rgb.rgb.off()
 
 AUTHORIZED_CARD = "0x7cdab502"
 DENIED_CARD = "0x5a6e25b6"
@@ -46,7 +42,7 @@ while True:
     if btn_left.value() == 0 and btn_right.value() == 0:
         door_close()
         buzzer.off()
-        rgb.off()
+        rgb.rgb.off()
         door_pwm.deinit()
         if mqtt_connected:
             mqtt.disconnect()
@@ -65,7 +61,7 @@ while True:
                     mqtt.publish(TOPICS.event("rfid_scan"),
                         f'{{"card":"{card_id}","status":"authorized"}}')
 
-                rgb.green()
+                rgb.rgb.green()
                 door_open()
                 if mqtt_connected:
                     mqtt.publish(TOPICS.device_state("door"), "open")
@@ -75,7 +71,7 @@ while True:
                 door_close()
                 if mqtt_connected:
                     mqtt.publish(TOPICS.device_state("door"), "close")
-                rgb.off()
+                rgb.rgb.off()
 
             else:
                 if mqtt_connected:
@@ -83,10 +79,10 @@ while True:
                         f'{{"card":"{card_id}","status":"unauthorized"}}')
 
                 for _ in range(3):
-                    rgb.red()
+                    rgb.rgb.red()
                     buzzer.on()
                     time.sleep(0.2)
-                    rgb.off()
+                    rgb.rgb.off()
                     buzzer.off()
                     time.sleep(0.2)
 

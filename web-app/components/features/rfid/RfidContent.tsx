@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUserByRfidCard, insertRfidScan, getRfidScans } from "@/lib/supabaseService";
+import {
+  getUserByRfidCard,
+  insertRfidScan,
+  getRfidScans,
+} from "@/lib/supabaseService";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import RfidStatistics from "./RfidStatistics";
 import RfidLogsTable, { FilterType } from "./RfidLogsTable";
@@ -19,7 +23,6 @@ export default function RfidContent() {
         const cardId = data.card;
         const isAuthorized = data.status === "authorized";
 
-        // If authorized, get the user_id for this card
         let userId = null;
         if (isAuthorized) {
           const user = await getUserByRfidCard(cardId);

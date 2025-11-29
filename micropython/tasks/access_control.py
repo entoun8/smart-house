@@ -30,17 +30,13 @@ class AccessControlTask:
         now = time.time()
 
         if card_id and (card_id != self.last_card or now - self.last_scan > SCAN_COOLDOWN):
-            print(f"[RFID] Scanned: {card_id}")
             self.last_card = card_id
             self.last_scan = now
 
             if card_id == AUTHORIZED_CARD:
-                print("[RFID] ACCESS GRANTED!")
                 mqtt_msg = f'{{"card":"{card_id}","status":"authorized"}}'
                 mqtt_topic = TOPICS.event("rfid_scan")
-                print(f"[RFID] Publishing to {mqtt_topic}: {mqtt_msg}")
                 result = self.mqtt.publish(mqtt_topic, mqtt_msg)
-                print(f"[RFID] MQTT publish result: {result}")
 
                 self.rgb.rgb.green()
                 self.door_open()
@@ -51,12 +47,9 @@ class AccessControlTask:
                 self.rgb.rgb.off()
 
             else:
-                print("[RFID] ACCESS DENIED!")
                 mqtt_msg = f'{{"card":"{card_id}","status":"unauthorized"}}'
                 mqtt_topic = TOPICS.event("rfid_scan")
-                print(f"[RFID] Publishing to {mqtt_topic}: {mqtt_msg}")
                 result = self.mqtt.publish(mqtt_topic, mqtt_msg)
-                print(f"[RFID] MQTT publish result: {result}")
 
                 for _ in range(3):
                     self.rgb.rgb.red()

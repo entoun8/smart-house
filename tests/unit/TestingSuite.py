@@ -2,20 +2,9 @@ import os
 import sys
 
 class PicoTestBase:
-    """Base class for all test classes"""
     is_test_class = True
 
 class TestingSuite:
-    """
-    Unit Testing Framework for Smart Home Components
-    Based on pico-test-main structure
-
-    Usage:
-        1. Create test classes that inherit from PicoTestBase
-        2. Add test methods prefixed with 'test_'
-        3. Run: ampy --port COM5 run tests/unit/TestingSuite.py
-    """
-
     TEST_DIR = 'unit'
     COMPONENTS_DIR = 'components'
     LIB_DIR = 'lib'
@@ -27,13 +16,11 @@ class TestingSuite:
         self.failed_tests = []
 
     def get_test_methods(self, obj):
-        """Returns a list of all methods in a class that are prefixed with 'test_'"""
         methods = [method for method in dir(obj) if method.startswith('test_') and callable(getattr(obj, method))]
         self.test_count += len(methods)
         return methods
 
     def run_all(self):
-        """Run all test classes found in the test directory"""
         print("=" * 50)
         print("Smart Home Unit Testing Suite")
         print("=" * 50)
@@ -69,7 +56,6 @@ class TestingSuite:
             print(f"\n⚠️  {self.tests_failed} test(s) failed")
 
     def run_test_class(self, obj):
-        """Run all test methods in a test class"""
         class_name = obj.__name__
         print(f"\n📦 Running {class_name}")
         print("-" * 50)
@@ -94,24 +80,18 @@ class TestingSuite:
                 print(f"❌ ERROR: {e}")
 
     def find_test_subclasses(self):
-        """
-        Finds all test classes that inherit from PicoTestBase
-        """
-        # Add necessary directories to path
-        sys.path.insert(0, '..')  # Parent directory
-        sys.path.insert(0, f'../{self.COMPONENTS_DIR}')  # Components
-        sys.path.insert(0, f'../{self.LIB_DIR}')  # Libraries
+        sys.path.insert(0, '..')  
+        sys.path.insert(0, f'../{self.COMPONENTS_DIR}')  
+        sys.path.insert(0, f'../{self.LIB_DIR}')  
 
         test_modules = []
         test_subclasses = []
 
-        # Get all Python test files in current directory
         for filename in os.listdir():
             if filename.endswith(".py") and filename != 'TestingSuite.py' and not filename.startswith('_'):
                 module_name = filename.split(".")[0]
                 test_modules.append(module_name)
 
-        # Import each test module and find test classes
         for module_name in test_modules:
             try:
                 module = __import__(module_name)

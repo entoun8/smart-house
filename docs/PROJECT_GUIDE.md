@@ -1,357 +1,281 @@
 # Smart House IoT Project - Complete Guide
 
-**Last Updated:** 2025-11-23
-**Status:** 100% Complete (8/8 tasks) 🎉
+**Last Updated:** 2025-11-29
+**Status:** 100% Complete (8/8 tasks)
 
----
+## Quick Start
 
-## 🚀 Quick Start
+### One-Line Setup
+1. Plug in ESP32 → Auto-starts all tasks
+2. Open web dashboard: http://localhost:3000
 
-### One-Click Launch
-```bash
-# 1. Plug in ESP32 to USB
-# 2. Double-click: RUN.bat
-# 3. Open: http://localhost:3000
+## Project Overview
+
+ESP32-based smart home system with 15 hardware components running 8 automated tasks.
+
+**Tech Stack:**
+- Hardware: ESP32 + 15 components
+- Firmware: MicroPython
+- Backend: Supabase (PostgreSQL) + HiveMQ (MQTT)
+- Frontend: Next.js 14
+
+**Architecture:**
+```
+ESP32 → WiFi → MQTT Broker → Web Dashboard → Database
 ```
 
-Everything starts automatically!
+No Python bridge required - direct ESP32-to-Cloud communication.
 
----
-
-## 📊 Project Overview
-
-### What This Is
-ESP32-based smart home system with:
-- **Hardware:** ESP32 with 15 components (sensors, actuators, displays)
-- **Firmware:** MicroPython 1.24.0
-- **Backend:** Supabase (PostgreSQL) + MQTT (HiveMQ)
-- **Frontend:** Next.js 14 web dashboard
-- **Bridge:** Python script for ESP32 ↔ Cloud communication
-
-### Architecture
-```
-ESP32 (Sensors + Actuators)
-    ↓ Serial
-Bridge (Python on PC)
-    ↓ HTTP + MQTT
-Database (Supabase) + MQTT Broker
-    ↓ WebSocket + API
-Web Dashboard (Next.js)
-    ↓ Browser
-User
-```
-
----
-
-## ✅ Completed Tasks (8/8)
+## Completed Tasks (8/8)
 
 ### Task 1: LED Auto Control
-- **File:** [micropython/task1_led_simple.py](../micropython/task1_led_simple.py)
-- **What:** LED ON 8pm-7am, OFF 7am-8pm
-- **Implementation:** Simple time-based, no MQTT/DB
+- LED ON: 8pm-7am
+- LED OFF: 7am-8pm
+- Implementation: Time-based, no MQTT/DB
+- File: [tasks/led_control.py](../micropython/tasks/led_control.py)
 
 ### Task 2: Temperature & Humidity
-- **Files:** [temperature_mqtt.py](../micropython/temperature_mqtt.py), [TemperatureStatus.tsx](../web-app/components/features/dashboard/TemperatureStatus.tsx)
-- **What:** Logs every 30 min, displays on dashboard
-- **Implementation:** MQTT + Database + Web
+- Logs every 15 minutes
+- Displays current readings on dashboard
+- Implementation: MQTT + Database
+- Files: [tasks/temperature.py](../micropython/tasks/temperature.py), Web components
 
 ### Task 3: Motion Detection
-- **Files:** [task3_pir_mqtt.py](../micropython/task3_pir_mqtt.py), [MotionStatus.tsx](../web-app/components/features/dashboard/MotionStatus.tsx)
-- **What:** RGB orange on motion, logs to DB, shows count on web
-- **Implementation:** Serial → Bridge → MQTT + Database
+- RGB orange when motion detected
+- Logs to database
+- Shows count on dashboard
+- Implementation: MQTT + Database
+- File: [tasks/motion.py](../micropython/tasks/motion.py)
 
 ### Task 4: Steam Detection
-- **Files:** [task4_steam_detection.py](../micropython/task4_steam_detection.py)
-- **What:** Auto-closes window + RGB blue when moisture detected
-- **Implementation:** Simple, no MQTT/DB
+- Auto-closes window when moisture detected
+- RGB blue flash
+- Implementation: Local control, MQTT for status
+- File: [tasks/steam.py](../micropython/tasks/steam.py)
 
 ### Task 5: Gas Detection
-- **Files:** [task5_gas_detection.py](../micropython/task5_gas_detection.py), [GasStatus.tsx](../web-app/components/features/dashboard/GasStatus.tsx)
-- **What:** Fan ON + RGB red when gas detected, logs to DB
-- **Implementation:** Serial → Bridge → MQTT + Database
+- Fan ON when gas detected
+- RGB solid red
+- Logs to database
+- Implementation: MQTT + Database
+- File: [tasks/gas.py](../micropython/tasks/gas.py)
 
 ### Task 6: Asthma Alert
-- **Files:** [task6_asthma_alert.py](../micropython/task6_asthma_alert.py), [AsthmaAlert.tsx](../web-app/components/features/dashboard/AsthmaAlert.tsx)
-- **What:** LCD + web alert when humidity >50% AND temp >27°C
-- **Implementation:** MQTT only (no DB logging)
+- LCD + web alert when humidity >50% AND temp >27°C
+- Implementation: MQTT only (no DB)
+- File: [tasks/asthma.py](../micropython/tasks/asthma.py)
 
 ### Task 7: RFID Access Control
-- **Files:** [task7_rfid_access.py](../micropython/task7_rfid_access.py), [rfid/page.tsx](../web-app/app/rfid/page.tsx)
-- **What:** Scan RFID → Check DB → Open door or deny + buzz
-- **Implementation:** Serial → Bridge → Database + MQTT
+- Checks card against hardcoded value
+- Opens door for authorized card (0x7cdab502)
+- Buzzer + RGB red flash for unauthorized
+- Logs all scans
+- Implementation: MQTT + Database
+- File: [tasks/access_control.py](../micropython/tasks/access_control.py)
 
-### Task 8: Device Control (Web App)
-- **Files:** [device_control.py](../micropython/tasks/device_control.py), [ControlsContent.tsx](../web-app/components/features/controls/ControlsContent.tsx)
-- **What:** Control door, window, fan remotely via web app
-- **Implementation:** Web App → MQTT → ESP32
+### Task 8: Device Control
+- Web app controls door, window, fan
+- Real-time status updates
+- Implementation: Web → MQTT → ESP32
+- File: [tasks/device_control.py](../micropython/tasks/device_control.py)
 
----
-
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 smart-house/
-├── RUN.bat                    ⭐ ONE-CLICK LAUNCHER
-├── README.md                  Project overview
-├── unified_bridge.py          Bridge for all tasks
-│
-├── micropython/               ESP32 code
-│   ├── boot.py               Auto-starts all tasks
-│   ├── all_tasks.py          Tasks 1-7 combined
-│   ├── config.py             Configuration
-│   └── components/           OOP component classes
-│       ├── sensors/          PIR, DHT, Gas, Water, RFID
-│       ├── actuators/        LED, RGB, Buzzer, Fan, Servos
-│       ├── displays/         LCD
-│       └── connectivity/     WiFi, MQTT
+├── micropython/                ESP32 code
+│   ├── main.py                Main entry (all tasks)
+│   ├── config.py              Pin & WiFi config
+│   ├── components/            Hardware classes
+│   │   ├── sensors/           PIR, DHT, Gas, Water, RFID
+│   │   ├── actuators/         LED, RGB, Buzzer, Fan, Servos
+│   │   ├── displays/          LCD
+│   │   └── connectivity/      WiFi, MQTT
+│   └── tasks/                 Task implementations
+│       ├── led_control.py     Task 1
+│       ├── temperature.py     Task 2
+│       ├── motion.py          Task 3
+│       ├── steam.py           Task 4
+│       ├── gas.py             Task 5
+│       ├── asthma.py          Task 6
+│       ├── access_control.py  Task 7
+│       ├── device_control.py  Task 8
+│       └── rgb_controller.py  Shared RGB manager
 │
 ├── web-app/                   Next.js dashboard
-│   ├── app/
-│   │   ├── page.tsx          Main dashboard
-│   │   └── rfid/page.tsx     RFID logs page
-│   ├── components/features/dashboard/
-│   │   ├── TemperatureStatus.tsx
-│   │   ├── HumidityStatus.tsx
-│   │   ├── MotionStatus.tsx
-│   │   ├── GasStatus.tsx
-│   │   └── AsthmaAlert.tsx
+│   ├── app/(main)/
+│   │   ├── page.tsx           Dashboard home
+│   │   ├── dashboard/         Main dashboard
+│   │   ├── rfid/              RFID logs
+│   │   └── controls/          Device controls
+│   ├── components/features/
+│   │   ├── dashboard/         Dashboard components
+│   │   └── controls/          Control components
 │   └── lib/
-│       ├── mqtt.ts           MQTT client
-│       └── supabase.ts       Database client
+│       ├── mqtt.ts            MQTT client
+│       └── supabase.ts        Database client
 │
-├── database/                  SQL schemas
-│   └── CLEAN_SCHEMA.sql      5 tables
+├── database/
+│   └── schema.sql             5 tables
 │
-├── docs/                      Documentation
-│   ├── PROJECT_GUIDE.md      This file (START HERE!)
-│   ├── PROJECT_STATUS.md     Detailed status
-│   ├── ARCHITECTURE.md       System architecture
-│   └── TASK_REQUIREMENTS.md  Original requirements
-│
-└── tests/                     Hardware tests
+└── docs/
+    ├── START_HERE_CLAUDE.md   Read first!
+    ├── PROJECT_GUIDE.md       This file
+    ├── PROJECT_STATUS.md      Detailed status
+    ├── ARCHITECTURE.md        System design
+    └── TASK_REQUIREMENTS.md   Original requirements
 ```
 
----
-
-## 🗄️ Database Schema
+## Database Schema
 
 ### Tables (5)
-1. **users** - RFID authorized users
+1. **users** - Authorized RFID users
 2. **temperature_logs** - Temp/humidity readings
-3. **motion_logs** - PIR motion events
-4. **gas_logs** - Gas sensor readings
-5. **rfid_scans** - Access attempts log
+3. **motion_logs** - Motion events
+4. **gas_logs** - Gas detections
+5. **rfid_scans** - Access attempts
 
----
+## MQTT Topics
 
-## 📡 MQTT Topics
+### Sensors
+- `ks5009/house/sensors/climate` - Combined temp + humidity JSON
 
-```
-ks5009/house/sensors/temperature       (Task 2)
-ks5009/house/sensors/humidity          (Task 2)
-ks5009/house/events/motion_detected    (Task 3)
-ks5009/house/events/gas_detected       (Task 5)
-ks5009/house/events/asthma_alert       (Task 6)
-ks5009/house/events/rfid_scan          (Task 7)
-```
+### Events
+- `ks5009/house/events/motion_detected` - "1"
+- `ks5009/house/events/gas_detected` - "1"/"0"
+- `ks5009/house/events/asthma_alert` - "1"/"0"
+- `ks5009/house/events/rfid_scan` - JSON with card & status
 
----
+### Device Commands (Web → ESP32)
+- `ks5009/house/devices/door/command` - "open"/"close"
+- `ks5009/house/devices/window/command` - "open"/"close"
+- `ks5009/house/devices/fan/command` - "on"/"off"
 
-## 🔧 Hardware Components
+### Device States (ESP32 → Web)
+- `ks5009/house/devices/door/state` - "open"/"close"
+- `ks5009/house/devices/window/state` - "open"/"close"
+- `ks5009/house/devices/fan/state` - "on"/"off"
+
+## Hardware Components
 
 | Component | Pin | Task |
 |-----------|-----|------|
-| Yellow LED | GPIO 12 | Task 1 |
-| RGB LEDs (4x) | GPIO 26 | Tasks 3,4,5,7 |
-| Buzzer | GPIO 25 | Task 7 |
-| PIR Sensor | GPIO 14 | Task 3 |
-| DHT11 | GPIO 17 | Tasks 2,6 |
-| Gas Sensor | GPIO 23 | Task 5 |
-| Water Sensor | GPIO 34 | Task 4 |
-| Fan Motor | GPIO 18,19 | Task 5 |
-| Door Servo | GPIO 13 | Task 7 |
-| Window Servo | GPIO 5 | Task 4 |
+| Yellow LED | 12 | Task 1 |
+| RGB LEDs (4x) | 26 | Tasks 3,4,5,7 |
+| Buzzer | 25 | Task 7 |
+| PIR Sensor | 14 | Task 3 |
+| DHT11 | 17 | Tasks 2,6 |
+| Gas Sensor | 23 | Task 5 |
+| Water Sensor | 34 | Task 4 |
+| Fan Motor | 18,19 | Task 5 |
+| Door Servo | 13 | Task 7,8 |
+| Window Servo | 5 | Task 4,8 |
 | LCD1602 | I2C (22,21) | Task 6 |
 | RFID RC522 | SPI | Task 7 |
 
----
+## How to Use
 
-## 🛠️ How to Use
-
-### Daily Usage
-1. **Plug in ESP32** → All tasks auto-start (via boot.py)
-2. **Double-click RUN.bat** → Starts bridge + web dashboard
-3. **Open browser** → http://localhost:3000
-4. **Done!** System is running
-
-### What Each Part Does
-
-**ESP32:**
-- Reads sensors continuously
-- Controls actuators (LED, fan, servos, RGB)
-- Prints events to serial
-
-**Bridge (unified_bridge.py):**
-- Monitors ESP32 serial output
-- Logs events to database
-- Publishes MQTT messages
-- Sends responses to ESP32 (Task 7)
-
-**Web Dashboard:**
-- Displays real-time sensor data
-- Shows alerts (gas, asthma)
-- RFID access logs
-- Updates via MQTT
-
----
-
-## 🧪 Testing Individual Tasks
-
+### Upload Code to ESP32
 ```bash
-# Upload components
-ampy --port COM4 put micropython/components
-
-# Test Task 1 (LED)
-ampy --port COM4 run micropython/task1_led_simple.py
-
-# Test Task 2 (Temperature)
-ampy --port COM4 run micropython/temperature_mqtt.py
-
-# Test all tasks together
-ampy --port COM4 put micropython/all_tasks.py
-ampy --port COM4 put micropython/boot.py
-# Reset ESP32
+ampy --port COM5 put micropython/main.py
+ampy --port COM5 put micropython/config.py
+ampy --port COM5 put micropython/components
+ampy --port COM5 put micropython/tasks
 ```
 
----
-
-## 🔍 Troubleshooting
-
-### ESP32 Not Auto-Starting
-**Solution:** Check boot.py is uploaded
+### Monitor ESP32
 ```bash
-ampy --port COM4 put micropython/boot.py
-# Reset ESP32
+python -m serial.tools.miniterm COM5 115200
 ```
 
-### Bridge Can't Connect
-**Solution:**
-1. Close other programs using COM4
-2. Check ESP32 is plugged in
-3. Verify port in Device Manager
+### Start Web Dashboard
+```bash
+cd web-app
+npm install
+npm run dev
+```
 
-### Web Dashboard Not Updating
-**Solution:**
-1. Make sure bridge is running
-2. Check MQTT connection in browser console
-3. Verify internet connection
+Open http://localhost:3000
 
-### Database Logging Fails
-**Solution:**
-1. Check Supabase credentials in unified_bridge.py
-2. Verify tables exist in Supabase
-3. Test database connection
+## Configuration
 
----
+### WiFi (config.py)
+```python
+WIFI_SSID = "Telstra099B26"
+WIFI_PASSWORD = "56jh79sqcfx6vnta"
+```
 
-## 🎯 Key Concepts
+### MQTT (config.py)
+```python
+MQTT_BROKER = "26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud"
+MQTT_PORT = 8883
+MQTT_USER = "smarthome"
+MQTT_PASSWORD = "SmartHome123!"
+```
 
-### Why Bridge Pattern?
-ESP32 can't directly connect to MQTT/Database due to network restrictions. The bridge runs on PC and acts as gateway:
-- **Task 1:** No bridge (simple time-based)
-- **Task 2:** Bridge for DB + MQTT
-- **Task 3:** Bridge for DB + MQTT
-- **Task 4:** No bridge (simple hardware control)
-- **Task 5:** Bridge for DB + MQTT
-- **Task 6:** Bridge for MQTT only
-- **Task 7:** Bridge for DB + MQTT + auth response
+### Authorized RFID Card (tasks/access_control.py)
+```python
+AUTHORIZED_CARD = "0x7cdab502"
+```
 
-### Component Organization (OOP)
-All hardware abstracted into classes:
+## Key Concepts
+
+### Direct ESP32-to-Cloud
+ESP32 connects directly to HiveMQ Cloud MQTT broker via WiFi. No Python bridge needed. Web app handles database logging.
+
+### Component Organization
+All hardware abstracted into OOP classes:
 ```python
 from components import LED, DHT, PIR, RFID
 
-led = LED()         # Auto-loads pin from config
+led = LED()      # Auto-loads pin from config
 dht = DHT()
 pir = PIR()
 
 led.on()
-temp = dht.temperature()
+temp = dht.read()
 if pir.motion_detected():
     print("Motion!")
 ```
 
----
+### Centralized RGB Control
+RGBController manages priority-based RGB LED control to prevent task conflicts.
 
-## 📚 Documentation Files
+## Troubleshooting
 
-### Essential (Keep These)
-- **PROJECT_GUIDE.md** (this file) - Complete overview
-- **PROJECT_STATUS.md** - Detailed current status
-- **ARCHITECTURE.md** - System design
-- **TASK_REQUIREMENTS.md** - Original requirements
+### ESP32 Not Connecting
+- Check WiFi credentials in config.py
+- Ensure correct MQTT broker and port
+- Verify ESP32 has internet access
 
-### Reference (In docs/)
-- **OOP_GUIDE.md** - Component classes usage
-- **CONFIG_GUIDE.md** - Configuration explained
-- **COMMANDS.md** - Common commands
-- **TASK[X]_*.md** - Individual task details
+### Web Dashboard Not Updating
+- Check MQTT connection in browser console
+- Verify web app has internet access
+- Check Supabase credentials
 
----
+### RFID Not Working
+- Check SPI wiring
+- Verify card ID matches AUTHORIZED_CARD
+- Check serial output for scanned card ID
 
-## 🎓 What You'll Learn
+## Project Stats
 
-- **IoT System Design** - Hardware to cloud architecture
-- **Embedded Programming** - MicroPython on ESP32
-- **Full-Stack Development** - Next.js + Supabase
-- **Real-time Communication** - MQTT pub/sub
-- **Hardware Interfacing** - GPIO, I2C, SPI, PWM
-- **Database Design** - PostgreSQL schemas
-- **System Integration** - Multiple technologies working together
-
----
-
-## 📈 Project Stats
-
-- **Total Tasks:** 7 of 7 (100%)
+- **Total Tasks:** 8/8 (100%)
 - **Hardware Components:** 15
 - **Software Components:** 12 OOP classes
 - **Database Tables:** 5
-- **MQTT Topics:** 6
-- **Web Pages:** 2 (Dashboard + RFID logs)
+- **MQTT Topics:** 10
+- **Web Pages:** 3
 - **Lines of Code:** ~2000+
 
----
+## What You'll Learn
 
-## 🎉 Project Complete!
+- IoT system design (hardware to cloud)
+- Embedded programming (MicroPython on ESP32)
+- Full-stack development (Next.js + Supabase)
+- Real-time communication (MQTT)
+- Hardware interfacing (GPIO, I2C, SPI, PWM)
+- Database design (PostgreSQL)
+- System integration
 
-All 7 tasks implemented and working. System ready for:
-- Real-world deployment
-- Further enhancements
-- Portfolio showcase
-- Learning platform
-
----
-
-## 💡 Quick Commands
-
-```bash
-# Upload all code to ESP32
-ampy --port COM4 put micropython/components
-ampy --port COM4 put micropython/all_tasks.py
-ampy --port COM4 put micropython/boot.py
-
-# Start system
-RUN.bat  # or: python unified_bridge.py
-
-# Monitor ESP32
-python -m serial.tools.miniterm COM4 115200
-
-# Start web app manually
-cd web-app
-npm run dev
-```
-
----
-
-**For detailed task explanations, see individual TASK*.md files in docs/ folder.**
+Project complete and ready for deployment!

@@ -16,16 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { CheckCircle, Filter, KeyRound, XCircle } from "lucide-react";
 import RfidLatestScan, { RfidScan } from "./RfidLatestScan";
+import TablePagination from "@/components/ui/table-pagination";
 
 export type FilterType = "all" | "success" | "fail";
 
@@ -118,12 +111,10 @@ export default function RfidLogsTable({
       </CardHeader>
 
       <CardContent>
-        {/* Latest Scan Alert */}
         {latestScan && (
           <RfidLatestScan scan={latestScan} formatTime={formatTime} />
         )}
 
-        {/* Table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -188,44 +179,16 @@ export default function RfidLogsTable({
           </Table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(page)}
-                      isActive={currentPage === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-
-        {/* Footer Info */}
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          Showing {startIndex + 1}-{Math.min(endIndex, filteredScans.length)} of {filteredScans.length} filtered scans ({totalScans} total)
+        <div className="mt-6">
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            filteredCount={filteredScans.length}
+            totalCount={totalScans}
+          />
         </div>
       </CardContent>
     </Card>
