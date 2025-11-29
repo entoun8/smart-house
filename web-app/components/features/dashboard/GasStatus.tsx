@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { insertGasLog, getGasCount } from "@/lib/supabaseService";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import { Flame } from "lucide-react";
 import {
@@ -17,13 +17,18 @@ export default function GasStatus() {
   const [lastDetection, setLastDetection] = useState<string>("");
   const [detectionCount, setDetectionCount] = useState<number>(0);
 
+  const fetchGasCount = async () => {
+    const count = await getGasCount();
+    setDetectionCount(count);
+  };
+
   useEffect(() => {
     const unsubscribe = subscribe(TOPICS.gas, async (message) => {
       if (message === "1") {
         setGasDetected(true);
         setLastDetection(new Date().toLocaleTimeString());
         setDetectionCount((prev) => prev + 1);
-        await supabase.from("gas_logs").insert({ value: 1 });
+        await insertGasLog(1);
       } else if (message === "0") {
         setGasDetected(false);
       }
@@ -33,16 +38,6 @@ export default function GasStatus() {
 
     return unsubscribe;
   }, []);
-
-  const fetchGasCount = async () => {
-    const { data, count } = await supabase
-      .from("gas_logs")
-      .select("*", { count: "exact", head: true });
-
-    if (count !== null) {
-      setDetectionCount(count);
-    }
-  };
 
   return (
     <Card

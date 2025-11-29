@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getUserByRfidCard, insertRfidScan, getRfidScans } from "@/lib/supabaseService";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import RfidStatistics from "./RfidStatistics";
 import RfidLogsTable, { FilterType } from "./RfidLogsTable";
@@ -19,11 +19,14 @@ export default function RfidContent() {
         const cardId = data.card;
         const isAuthorized = data.status === "authorized";
 
-        const { error } = await supabase.from("rfid_scans").insert({
-          card_id: cardId,
-          success: isAuthorized,
-          timestamp: new Date().toISOString(),
-        });
+        // If authorized, get the user_id for this card
+        let userId = null;
+        if (isAuthorized) {
+          const user = await getUserByRfidCard(cardId);
+          userId = user?.id || null;
+        }
+
+        const { error } = await insertRfidScan(cardId, isAuthorized, userId);
 
         if (error) {
           console.error("Failed to insert RFID scan:", error);
@@ -48,40 +51,18 @@ export default function RfidContent() {
   }, []);
 
   const fetchScans = async () => {
-    const { data, error } = await supabase
-      .from("rfid_scans")
-      .select(
-        `
-        id,
-        card_id,
-        success,
-        user_id,
-        timestamp,
-        users (
-          name
-        )
-      `
-      )
-      .order("timestamp", { ascending: false })
-      .limit(100);
+    const data = await getRfidScans(100);
 
-    if (error) {
-      console.error("Error fetching RFID scans:", error);
-      return;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formattedData = data.map((scan: any) => ({
+      ...scan,
+      user: scan.users,
+    }));
 
-    if (data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const formattedData = data.map((scan: any) => ({
-        ...scan,
-        user: scan.users,
-      }));
+    setScans(formattedData);
 
-      setScans(formattedData);
-
-      if (formattedData.length > 0) {
-        setLatestScan(formattedData[0]);
-      }
+    if (formattedData.length > 0) {
+      setLatestScan(formattedData[0]);
     }
   };
 

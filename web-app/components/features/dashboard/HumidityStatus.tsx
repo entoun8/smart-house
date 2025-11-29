@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getLatestHumidity } from "@/lib/supabaseService";
 import { connectMQTT, TOPICS, subscribe } from "@/lib/mqtt";
 import { Droplets } from "lucide-react";
 import {
@@ -27,15 +27,10 @@ export default function HumidityStatus() {
     });
 
     const fetchInitialHumidity = async () => {
-      const { data } = await supabase
-        .from("temperature_logs")
-        .select("humidity, timestamp")
-        .order("timestamp", { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        setHumidity(data[0].humidity);
-        setLastUpdate(new Date(data[0].timestamp).toLocaleTimeString());
+      const data = await getLatestHumidity();
+      if (data) {
+        setHumidity(data.humidity);
+        setLastUpdate(new Date(data.timestamp).toLocaleTimeString());
       }
     };
 

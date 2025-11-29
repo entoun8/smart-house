@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { insertMotionLog, getMotionCount } from "@/lib/supabaseService";
 import { subscribe, TOPICS } from "@/lib/mqtt";
 import { Activity } from "lucide-react";
 import {
@@ -16,30 +16,22 @@ export default function MotionStatus() {
   const [motionCount, setMotionCount] = useState<number>(0);
   const [lastDetection, setLastDetection] = useState<string>("");
 
+  const fetchMotionCount = async () => {
+    const count = await getMotionCount(1);
+    setMotionCount(count);
+  };
+
   useEffect(() => {
     const unsubscribe = subscribe(TOPICS.motion, async () => {
       setLastDetection(new Date().toLocaleTimeString());
       setMotionCount((prev) => prev + 1);
-      await supabase.from("motion_logs").insert({});
+      await insertMotionLog();
     });
 
     fetchMotionCount();
 
     return unsubscribe;
   }, []);
-
-  const fetchMotionCount = async () => {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-    const { data, count } = await supabase
-      .from("motion_logs")
-      .select("*", { count: "exact", head: true })
-      .gte("timestamp", oneHourAgo);
-
-    if (count !== null) {
-      setMotionCount(count);
-    }
-  };
 
   return (
     <Card className="hover:shadow-lg transition-all">

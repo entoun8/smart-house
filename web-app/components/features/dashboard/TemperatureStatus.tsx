@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { insertTemperatureLog, getLatestTemperature } from "@/lib/supabaseService";
 import { connectMQTT, TOPICS, subscribe } from "@/lib/mqtt";
 import { Thermometer } from "lucide-react";
 import {
@@ -25,22 +25,14 @@ export default function TemperatureStatus() {
       setTemperature(data.temp);
       setLastUpdate(new Date().toLocaleTimeString());
 
-      await supabase.from("temperature_logs").insert({
-        temp: data.temp,
-        humidity: data.humidity
-      });
+      await insertTemperatureLog(data.temp, data.humidity);
     });
 
     const fetchInitialTemperature = async () => {
-      const { data } = await supabase
-        .from("temperature_logs")
-        .select("temp, timestamp")
-        .order("timestamp", { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        setTemperature(data[0].temp);
-        setLastUpdate(new Date(data[0].timestamp).toLocaleTimeString());
+      const data = await getLatestTemperature();
+      if (data) {
+        setTemperature(data.temp);
+        setLastUpdate(new Date(data.timestamp).toLocaleTimeString());
       }
     };
 

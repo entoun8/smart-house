@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { CheckCircle, Filter, KeyRound, XCircle } from "lucide-react";
 import RfidLatestScan, { RfidScan } from "./RfidLatestScan";
 
@@ -28,6 +37,8 @@ interface RfidLogsTableProps {
   formatTime: (timestamp: string) => string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function RfidLogsTable({
   scans,
   filter,
@@ -35,15 +46,27 @@ export default function RfidLogsTable({
   latestScan,
   formatTime,
 }: RfidLogsTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+
   const filteredScans = scans.filter((scan) => {
     if (filter === "success") return scan.success;
     if (filter === "fail") return !scan.success;
     return true;
   });
 
+  const totalPages = Math.ceil(filteredScans.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedScans = filteredScans.slice(startIndex, endIndex);
+
   const successCount = scans.filter((s) => s.success).length;
   const failCount = scans.filter((s) => !s.success).length;
   const totalScans = scans.length;
+
+  const handleFilterChange = (newFilter: FilterType) => {
+    setFilter(newFilter);
+    setCurrentPage(1);
+  };
 
   return (
     <Card>
@@ -63,7 +86,7 @@ export default function RfidLogsTable({
             <Button
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("all")}
+              onClick={() => handleFilterChange("all")}
             >
               <Filter className="w-4 h-4 mr-2" />
               All ({totalScans})
@@ -71,7 +94,7 @@ export default function RfidLogsTable({
             <Button
               variant={filter === "success" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("success")}
+              onClick={() => handleFilterChange("success")}
               className={
                 filter === "success" ? "bg-green-500 hover:bg-green-600" : ""
               }
@@ -82,7 +105,7 @@ export default function RfidLogsTable({
             <Button
               variant={filter === "fail" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("fail")}
+              onClick={() => handleFilterChange("fail")}
               className={
                 filter === "fail" ? "bg-red-500 hover:bg-red-600" : ""
               }
@@ -112,7 +135,7 @@ export default function RfidLogsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredScans.length === 0 ? (
+              {paginatedScans.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
@@ -122,7 +145,7 @@ export default function RfidLogsTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredScans.map((scan) => (
+                paginatedScans.map((scan) => (
                   <TableRow key={scan.id}>
                     <TableCell className="text-sm">
                       {formatTime(scan.timestamp)}
@@ -165,9 +188,44 @@ export default function RfidLogsTable({
           </Table>
         </div>
 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+
         {/* Footer Info */}
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          Showing {filteredScans.length} of {totalScans} total scans
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredScans.length)} of {filteredScans.length} filtered scans ({totalScans} total)
         </div>
       </CardContent>
     </Card>
