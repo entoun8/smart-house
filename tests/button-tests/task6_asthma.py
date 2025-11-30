@@ -28,6 +28,7 @@ while True:
             lcd.clear()
         if mqtt_connected:
             mqtt.publish(TOPICS.event("asthma_alert"), "0")
+            time.sleep(0.5)  
             mqtt.disconnect()
         break
 

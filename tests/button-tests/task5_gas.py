@@ -29,6 +29,7 @@ while True:
         if mqtt_connected:
             mqtt.publish(TOPICS.event("gas_detected"), "0")
             mqtt.publish(TOPICS.device_state("fan"), "off")
+            time.sleep(0.5)  
             mqtt.disconnect()
         break
 

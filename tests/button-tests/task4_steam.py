@@ -28,6 +28,7 @@ while True:
         window.open()
         if mqtt_connected:
             mqtt.publish(TOPICS.device_state("window"), "open")
+            time.sleep(0.5)  # Wait for message to be sent
             mqtt.disconnect()
         break
 

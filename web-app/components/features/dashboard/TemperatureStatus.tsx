@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { insertTemperatureLog, getLatestTemperature } from "@/lib/supabaseService";
-import { connectMQTT, TOPICS, subscribe } from "@/lib/mqtt";
+import { TOPICS, subscribe } from "@/lib/mqtt";
 import { Thermometer } from "lucide-react";
 import {
   Card,
@@ -18,8 +18,6 @@ export default function TemperatureStatus() {
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
   useEffect(() => {
-    connectMQTT();
-
     const unsubscribe = subscribe(TOPICS.climate, async (message) => {
       const data = JSON.parse(message);
       setTemperature(data.temp);

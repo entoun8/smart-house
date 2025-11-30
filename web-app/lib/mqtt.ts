@@ -1,7 +1,9 @@
 import mqtt from "mqtt";
 
 const MQTT_CONFIG = {
-  broker: process.env.NEXT_PUBLIC_MQTT_BROKER || "wss://26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud:8884/mqtt",
+  broker:
+    process.env.NEXT_PUBLIC_MQTT_BROKER ||
+    "wss://26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud:8884/mqtt",
   username: process.env.NEXT_PUBLIC_MQTT_USERNAME || "smarthome",
   password: process.env.NEXT_PUBLIC_PASSWORD || "SmartHome123!",
 };
@@ -19,7 +21,6 @@ export const TOPICS = {
   asthma: "ks5009/house/events/asthma_alert",
   rfid: "ks5009/house/events/rfid_scan",
 
-  // Device control topics
   doorCommand: "ks5009/house/devices/door/command",
   doorState: "ks5009/house/devices/door/state",
   windowCommand: "ks5009/house/devices/window/command",
@@ -63,7 +64,6 @@ export function subscribe(topic: string, callback: (message: string) => void) {
 
   client.on("message", messageHandler);
 
-  // Return cleanup function to remove this specific listener
   return () => {
     client?.off("message", messageHandler);
     client?.unsubscribe(topic);

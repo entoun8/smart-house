@@ -15,7 +15,7 @@ export default function Header({ isConnected }: HeaderProps) {
   const pathname = usePathname();
 
   const getPageInfo = () => {
-    if (pathname === "/dashboard") {
+    if (pathname === "/" || pathname === "/dashboard") {
       return {
         title: "Smart Home Dashboard",
         description: "Monitor your home in real-time",
@@ -53,9 +53,9 @@ export default function Header({ isConnected }: HeaderProps) {
       <div className="flex flex-wrap gap-2 md:gap-3">
         <ThemeToggle />
 
-        <Link href="/dashboard">
+        <Link href="/">
           <Button
-            variant={pathname === "/dashboard" ? "default" : "outline"}
+            variant={pathname === "/" ? "default" : "outline"}
             className="gap-2"
           >
             <LayoutDashboard className="w-4 h-4" />

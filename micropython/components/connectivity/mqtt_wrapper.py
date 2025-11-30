@@ -1,4 +1,5 @@
 from .mqtt import MQTT
+from config import TOPICS
 
 class MQTTWrapper:
     def __init__(self):
@@ -13,7 +14,7 @@ class MQTTWrapper:
         if self.mqtt.connect():
             self.connected = True
             self.mqtt.client.set_callback(self._on_message)
-            self.mqtt.client.subscribe(b"ks5009/house/devices/+/command")
+            self.mqtt.client.subscribe(TOPICS.all_commands().encode())
             return True
         self.connected = False
         return False

@@ -8,7 +8,7 @@ class MQTT:
         try:
             if MQTT_PORT == 8883:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-                context.verify_mode = ssl.CERT_NONE  # Skip cert verification
+                context.verify_mode = ssl.CERT_NONE 
 
                 self.client = MQTTClient(
                     client_id=MQTT_CLIENT_ID,
@@ -32,7 +32,6 @@ class MQTT:
                 self.client = MQTTClient(**params)
 
         except Exception as e:
-            print(f"[MQTT] Init error: {e}")
             self.client = None
         self.connected = False
 
@@ -41,11 +40,9 @@ class MQTT:
             if self.client:
                 self.client.connect()
                 self.connected = True
-                print("[MQTT] Connected!")
                 return True
             return False
         except Exception as e:
-            print(f"[MQTT] Failed: {e}")
             return False
 
     def is_connected(self):
@@ -55,7 +52,6 @@ class MQTT:
         if self.connected:
             self.client.disconnect()
             self.connected = False
-            print("[MQTT] Disconnected")
 
     def publish(self, topic, message):
         if not self.connected:

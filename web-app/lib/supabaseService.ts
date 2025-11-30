@@ -1,9 +1,5 @@
 import { supabase } from "./supabase";
 
-// ============================================
-// Motion Logs
-// ============================================
-
 export async function insertMotionLog() {
   return await supabase.from("motion_logs").insert({});
 }
@@ -19,10 +15,6 @@ export async function getMotionCount(hours: number = 1) {
   return count || 0;
 }
 
-// ============================================
-// Gas Logs
-// ============================================
-
 export async function insertGasLog(value: number) {
   return await supabase.from("gas_logs").insert({ value });
 }
@@ -34,10 +26,6 @@ export async function getGasCount() {
 
   return count || 0;
 }
-
-// ============================================
-// Temperature Logs
-// ============================================
 
 export async function insertTemperatureLog(temp: number, humidity: number) {
   return await supabase.from("temperature_logs").insert({
@@ -65,10 +53,6 @@ export async function getLatestHumidity() {
 
   return data && data.length > 0 ? data[0] : null;
 }
-
-// ============================================
-// RFID Scans
-// ============================================
 
 export async function getUserByRfidCard(cardId: string) {
   const { data } = await supabase

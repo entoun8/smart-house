@@ -1,29 +1,21 @@
 import time
-from machine import Pin, PWM
-from components import RFID, Buzzer
+from components import RFID, Buzzer, DoorServo
 from config import TOPICS
-import config
 
-SCAN_COOLDOWN = 3  
+SCAN_COOLDOWN = 3
 
-AUTHORIZED_CARD = "0x7cdab502"  
+AUTHORIZED_CARD = "0x7cdab502"
 
 class AccessControlTask:
     def __init__(self, mqtt, rgb_controller):
         self.rfid = RFID()
         self.buzzer = Buzzer()
-        self.door_pwm = PWM(Pin(config.DOOR_SERVO_PIN), freq=50)
-        self.door_close()  
+        self.door = DoorServo()
+        self.door.close()
         self.mqtt = mqtt
         self.rgb = rgb_controller
         self.last_card = None
-        self.last_scan = 0
-
-    def door_open(self):
-        self.door_pwm.duty(128)  
-
-    def door_close(self):
-        self.door_pwm.duty(26)   
+        self.last_scan = 0   
 
     def update(self):
         card_id = self.rfid.scan()
@@ -39,10 +31,10 @@ class AccessControlTask:
                 result = self.mqtt.publish(mqtt_topic, mqtt_msg)
 
                 self.rgb.rgb.green()
-                self.door_open()
+                self.door.open()
                 self.mqtt.publish(TOPICS.device_state("door"), "open")
                 time.sleep(3)
-                self.door_close()
+                self.door.close()
                 self.mqtt.publish(TOPICS.device_state("door"), "close")
                 self.rgb.rgb.off()
 
@@ -61,5 +53,4 @@ class AccessControlTask:
 
     def cleanup(self):
         self.buzzer.off()
-        self.door_close()
-        self.door_pwm.deinit()
+        self.door.close()

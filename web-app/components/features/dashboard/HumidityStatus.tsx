@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getLatestHumidity } from "@/lib/supabaseService";
-import { connectMQTT, TOPICS, subscribe } from "@/lib/mqtt";
+import { TOPICS, subscribe } from "@/lib/mqtt";
 import { Droplets } from "lucide-react";
 import {
   Card,
@@ -18,8 +18,6 @@ export default function HumidityStatus() {
   const [lastUpdate, setLastUpdate] = useState<string>("");
 
   useEffect(() => {
-    connectMQTT();
-
     const unsubscribe = subscribe(TOPICS.climate, (message) => {
       const data = JSON.parse(message);
       setHumidity(data.humidity);

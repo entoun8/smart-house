@@ -29,14 +29,7 @@ export default function RfidContent() {
           userId = user?.id || null;
         }
 
-        const { error } = await insertRfidScan(cardId, isAuthorized, userId);
-
-        if (error) {
-          console.error("Failed to insert RFID scan:", error);
-        } else {
-          console.log("✅ RFID scan saved to database");
-        }
-
+        await insertRfidScan(cardId, isAuthorized, userId);
         fetchScans();
       } catch (e) {
         console.error("Failed to parse RFID message:", e);
