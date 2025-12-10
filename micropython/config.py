@@ -32,8 +32,8 @@ RFID_RST = 22
 RGB_LED_COUNT = 4
 
 # WiFi
-WIFI_SSID = "Telstra099B26"
-WIFI_PASSWORD = "56jh79sqcfx6vnta"
+WIFI_SSID = "CyFi"
+WIFI_PASSWORD = "SecurityA40"
 
 # MQTT Broker 
 MQTT_BROKER = "26cba3f4929a4be4942914ec72fe5b4b.s1.eu.hivemq.cloud"
